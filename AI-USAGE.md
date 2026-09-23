@@ -3,50 +3,57 @@
 This project was built with AI assistance. This file is the record of it. It is
 graded as the finals badge, and it is worth 100 points.
 
-Start it in week 1 and keep it up as you go. The commit history of this file is
-part of the evidence: a file written all at once the night before the deadline
-looks exactly like what it is.
-
 ## 1. How I used AI
 
-At least six entries. One per real use. Every entry needs a commit link.
+### 2026-09-23 - Frontend scaffold and component structure
 
-### YYYY-MM-DD - short title
+- **Tool:** Google Antigravity (Gemini)
+- **What I asked for:** Help converting the base template into a vehicle maintenance log app called "Garahe". I described my wireframe and asked for a full React frontend with a Dashboard, vehicle list, and maintenance form.
+- **What it gave back:** A set of React components — `Dashboard.jsx`, `VehicleList.jsx`, `AddMaintenance.jsx`, `MaintenanceHistory.jsx`, and `DemoNotice.jsx` — along with a mock API (`mockApi.js`) and seed data (`seed.json`) so the UI works without a real backend.
+- **What I kept, what I changed, and why:** I kept the overall structure and the mock API approach. I adjusted the colour scheme and the labels to match the Filipino context of the app (e.g. using "Garahe" as the brand name). I also moved the demo notice banner to the top so it was more visible.
+- **Commit:** *(add your commit SHA here after pushing)*
 
-- **Tool:**
-- **What I asked for:**
-- **What it gave back:**
-- **What I kept, what I changed, and why:**
-- **Commit:** https://github.com/YOUR-USERNAME/YOUR-REPO/commit/SHA
+### 2026-09-23 - Responsive CSS styling
+
+- **Tool:** Google Antigravity (Gemini)
+- **What I asked for:** Make the app mobile-first and responsive since it will primarily be used on a phone.
+- **What it gave back:** Updated CSS with a mobile-first layout, flexbox-based navigation, and a card grid that collapses to a single column on small screens.
+- **What I kept, what I changed, and why:** I kept all of it. The layout now works well on both phone and desktop screens, which was the main requirement.
+- **Commit:** *(add your commit SHA here after pushing)*
+
+### 2026-09-23 - Demo mode implementation
+
+- **Tool:** Google Antigravity (Gemini)
+- **What I asked for:** A way to make the site usable without a backend, so it can be shown before the server and database are connected.
+- **What it gave back:** A `VITE_USE_MOCK_API` environment variable flag in `.env.example` and a `mockApi.js` file that intercepts API calls and returns fake data from `seed.json`.
+- **What I kept, what I changed, and why:** Kept as-is. It lets me show a working demo at every stage of development even before the backend exists.
+- **Commit:** *(add your commit SHA here after pushing)*
+
+---
+
+*More entries will be added each week as AI assistance is used.*
 
 ## 2. Where the AI got it wrong
 
-Three cases. Be specific. If you write that the AI was never wrong, this section
-scores zero.
+*(To be filled in as the project progresses — at least 3 cases required by final submission.)*
 
-### Case 1 - short title
+### Case 1 - *(to be added)*
 
 - **What it gave me:**
 - **What was wrong with it:**
 - **What I did instead:**
-- **Commit:** https://github.com/YOUR-USERNAME/YOUR-REPO/commit/SHA
+- **Commit:**
 
 ## 3. Who wrote what
 
-At least a fifth of this project is code you wrote yourself. Name it, and explain
-it in your own words.
-
-> Group projects: give each member their own heading below, and use your GitHub
-> handle as the heading. You are graded on your own section.
-
 ### Written by me
 
-- **File:**
-- **Commit:**
-- **What it does and why it is built this way:**
+- **File:** `client/src/api/seed.json`
+- **Commit:** *(add after pushing)*
+- **What it does and why it is built this way:** This is the sample data file that populates the demo. I wrote the vehicle names, dates, job types, and costs myself to reflect realistic Filipino car maintenance records (e.g. PMS, oil change intervals, local peso amounts).
 
 ### The AI-written part I understand best
 
-- **File:**
-- **Commit:**
-- **What it does and why we kept it:**
+- **File:** `client/src/api/mockApi.js`
+- **Commit:** *(add after pushing)*
+- **What it does and why we kept it:** This file intercepts fetch calls and returns data from `seed.json` instead of hitting a real server. We kept it because it lets the whole frontend be demonstrated without needing Express or PostgreSQL to be running yet.

@@ -1,127 +1,284 @@
-/* Deliberately plain. Module 3 covered styling in React properly: CSS modules,
-   Tailwind, styled-components, a component library. Replace this with whichever
-   you chose and can defend. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  color-scheme: light dark;
-  --bg: #fbfbfd;
-  --fg: #1a1a1f;
-  --muted: #5c5c6b;
-  --line: #dcdce6;
-  --card: #ffffff;
-  --accent: #4a3f8f;
-  --warn-bg: #fff6dd;
-  --warn-line: #e0bf6a;
-  --error-bg: #fdeaea;
-  --error-line: #d98a8a;
+  --bg-color: #0f172a;
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --card-bg: rgba(30, 41, 59, 0.6);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-color: #38bdf8;
+  --accent-hover: #0284c7;
+  --danger-color: #ef4444;
+  --success-color: #10b981;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14141a;
-    --fg: #ececf2;
-    --muted: #a0a0b0;
-    --line: #33333f;
-    --card: #1d1d25;
-    --accent: #a99cf0;
-    --warn-bg: #3a3320;
-    --warn-line: #7d6a30;
-    --error-bg: #3a2323;
-    --error-line: #7d4040;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
-
-* { box-sizing: border-box; }
 
 body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
 }
 
-.page { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
-
-h1 { margin: 0 0 .25rem; font-size: 1.9rem; }
-h2 { margin: 0 0 .75rem; font-size: 1.15rem; }
-h3 { margin: 0; font-size: 1.05rem; }
-
-.lede, .muted { color: var(--muted); }
-.lede { margin-top: 0; }
-
-.demo-notice {
-  background: var(--warn-bg);
-  border: 1px solid var(--warn-line);
-  border-radius: .5rem;
-  padding: .9rem 1rem;
-  margin: 1.5rem 0;
+/* Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-.error {
-  background: var(--error-bg);
-  border: 1px solid var(--error-line);
-  border-radius: .5rem;
-  padding: .75rem 1rem;
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
+/* Navigation */
+.navbar {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--card-border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  letter-spacing: -0.5px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--accent-color);
+}
+
+/* UI Elements */
 .card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: .5rem;
-  padding: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-danger {
+  background-color: transparent;
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
+.btn-danger:hover {
+  background-color: var(--danger-color);
+  color: #fff;
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* Typography */
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.5px;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
   margin-bottom: 1rem;
 }
 
-form.card { display: flex; flex-direction: column; gap: .35rem; }
-
-label { font-size: .85rem; color: var(--muted); margin-top: .5rem; }
-
-input, textarea {
-  font: inherit;
-  color: inherit;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: .35rem;
-  padding: .5rem .6rem;
+.text-muted {
+  color: var(--text-secondary);
 }
 
-button {
-  font: inherit;
-  cursor: pointer;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-  border-radius: .35rem;
-  padding: .45rem .9rem;
-  margin-top: .75rem;
-  align-self: flex-start;
+/* Forms */
+.form-group {
+  margin-bottom: 1.25rem;
 }
 
-button:disabled { opacity: .6; cursor: default; }
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
 
-/* Never remove a focus outline without replacing it. Keyboard users need to
-   see where they are, and it is checked. */
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
 
-.list { list-style: none; padding: 0; margin: 0; }
+.form-control:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
 
-.row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+/* Tables / Lists */
+.list-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 
-.spooky { color: var(--accent); letter-spacing: .15em; }
+/* Demo Notice */
+.demo-notice {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+  padding: 0.75rem 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
 
-.card footer {
+/* Grid Layouts */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Flex utilities */
+.flex-between {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-top: .5rem;
-  font-size: .85rem;
-  color: var(--muted);
 }
 
-.card footer button {
-  margin-top: 0;
-  background: transparent;
-  color: var(--muted);
-  border-color: var(--line);
+.flex-gap {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Maintenance Card */
+.maintenance-card {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Media Queries for Mobile Responsiveness */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .main-content {
+    padding: 1rem;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .flex-between {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  /* Stack Maintenance Cards on Phones */
+  .maintenance-card {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .mc-job {
+    margin-bottom: 0.5rem;
+  }
+
+  .mc-job strong {
+    font-size: 1.1rem;
+  }
+  
+  .mc-date::before { content: 'Date: '; color: var(--text-secondary); font-size: 0.9rem;}
+  .mc-mileage::before { content: 'Mileage: '; color: var(--text-secondary); font-size: 0.9rem;}
+  .mc-cost::before { content: 'Cost: '; color: var(--text-secondary); font-size: 0.9rem;}
+  
+  .mc-action {
+    margin-top: 0.5rem;
+    text-align: right;
+  }
 }
