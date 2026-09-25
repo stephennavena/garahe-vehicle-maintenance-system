@@ -1,85 +1,125 @@
-// The real API.
+// The real backend.
 //
-// Same function names, same return types, and the same shape of failure as
-// mockApi.js, so your components cannot tell the difference.
+// Same function names and same return shapes as mockApi.js, so components
+// cannot tell the difference. Data lives in your PostgreSQL database via the
+// Express API.
+//
+// The DB uses snake_case column names (vehicle_id, job_type, current_mileage).
+// This file normalises them to camelCase on the way out so the rest of the
+// frontend code works unchanged whether it is talking to mock or real.
 
-// Vite compiles this in at build time. It is public.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
-async function handleResponse(response) {
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+async function request(path, options = {}) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+  // DELETE returns 204 No Content — no body to parse
+  if (response.status === 204) return null
+
+  const data = await response.json()
+
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(text || response.statusText)
+    throw new Error(data.error || `Request failed: ${response.status}`)
   }
-  return response.json()
+
+  return data
 }
 
-// -- VEHICLES --
+// Convert a DB vehicle row (snake_case) to the shape the UI expects (camelCase)
+function normaliseVehicle(row) {
+  return {
+    id: row.id,
+    model: row.model,
+    currentMileage: row.current_mileage,
+    created_at: row.created_at,
+  }
+}
+
+// Convert a DB maintenance row (snake_case) to the shape the UI expects
+function normaliseEntry(row) {
+  return {
+    id: row.id,
+    vehicleId: row.vehicle_id,
+    jobType: row.job_type,
+    date: row.date ? row.date.slice(0, 10) : row.date, // keep YYYY-MM-DD only
+    mileage: row.mileage,
+    cost: Number(row.cost),
+    notes: row.notes,
+    created_at: row.created_at,
+  }
+}
+
+// ── Vehicles ───────────────────────────────────────────────────────────────────
 
 export async function listVehicles() {
-  const res = await fetch(`${BASE_URL}/api/vehicles`)
-  return handleResponse(res)
+  const rows = await request('/api/vehicles')
+  return rows.map(normaliseVehicle)
 }
 
 export async function getVehicle(id) {
-  const res = await fetch(`${BASE_URL}/api/vehicles/${id}`)
-  return handleResponse(res)
+  const row = await request(`/api/vehicles/${id}`)
+  return normaliseVehicle(row)
 }
 
 export async function createVehicle(input) {
-  const res = await fetch(`${BASE_URL}/api/vehicles`, {
+  const row = await request('/api/vehicles', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      model: input.model,
+      current_mileage: input.currentMileage ?? input.current_mileage ?? 0,
+    }),
   })
-  return handleResponse(res)
+  return normaliseVehicle(row)
 }
 
 export async function updateVehicle(id, input) {
-  const res = await fetch(`${BASE_URL}/api/vehicles/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+  const row = await request(`/api/vehicles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      model: input.model,
+      current_mileage: input.currentMileage ?? input.current_mileage ?? 0,
+    }),
   })
-  return handleResponse(res)
+  return normaliseVehicle(row)
 }
 
 export async function deleteVehicle(id) {
-  const res = await fetch(`${BASE_URL}/api/vehicles/${id}`, {
-    method: 'DELETE',
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || res.statusText)
-  }
+  await request(`/api/vehicles/${id}`, { method: 'DELETE' })
 }
 
-// -- MAINTENANCE ENTRIES --
+// ── Maintenance entries ────────────────────────────────────────────────────────
 
 export async function listMaintenanceEntries(vehicleId) {
-  let url = `${BASE_URL}/api/maintenance`
-  if (vehicleId) {
-    url = `${BASE_URL}/api/vehicles/${vehicleId}/maintenance`
-  }
-  const res = await fetch(url)
-  return handleResponse(res)
+  const path = vehicleId
+    ? `/api/maintenance?vehicleId=${vehicleId}`
+    : '/api/maintenance'
+  const rows = await request(path)
+  return rows.map(normaliseEntry)
 }
 
 export async function createMaintenanceEntry(input) {
-  const res = await fetch(`${BASE_URL}/api/maintenance`, {
+  const row = await request('/api/maintenance', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      vehicle_id: input.vehicleId ?? input.vehicle_id,
+      job_type: input.jobType ?? input.job_type,
+      date: input.date,
+      mileage: input.mileage,
+      cost: input.cost ?? 0,
+      notes: input.notes ?? '',
+    }),
   })
-  return handleResponse(res)
+  return normaliseEntry(row)
 }
 
 export async function deleteMaintenanceEntry(id) {
-  const res = await fetch(`${BASE_URL}/api/maintenance/${id}`, {
-    method: 'DELETE',
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || res.statusText)
-  }
+  await request(`/api/maintenance/${id}`, { method: 'DELETE' })
 }
