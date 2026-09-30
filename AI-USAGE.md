@@ -53,6 +53,26 @@ graded as the finals badge, and it is worth 100 points.
 - **What I kept, what I changed, and why:** I caught both bugs while testing — the PATCH request was returning 404 and the maintenance list was returning an empty array. I reported both and the corrected version uses `PUT` and the `?vehicleId=N` query parameter that the server actually implements. I also asked for the camelCase normalisation layer specifically, because I noticed the DB was returning `vehicle_id` and `current_mileage` but the components were expecting `vehicleId` and `currentMileage`.
 - **Commit:** [98b4143](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/98b4143)
 
+### 2026-09-30 - UI Polish, In-Place Maintenance Editing, Filtering, and Toast Feedback System
+
+- **Tool:** Google Antigravity (Gemini)
+- **What I asked for:**
+  1. Add quick summary statistics (Total Vehicles, Total Jobs, Total Spent, Last Service) to the dashboard and make recent maintenance items clickable to navigate straight to that vehicle's logs.
+  2. Implement search, sorting (newest/oldest/highest cost), and date range filtering with clear "From date" and "To date" pickers for maintenance history.
+  3. Implement in-place editing for maintenance entries so records can be updated without deleting and recreating them, plus a CSV export feature.
+  4. Fix form validation: change the cryptic `>=` symbol error message to natural plain English (`Mileage should be greater than or equal to current vehicle mileage (X km)`).
+  5. Replace native browser alert/confirm dialogues with a modern Toast notification system and reusable modal confirmation dialog.
+- **What it gave back:**
+  - `Toast.jsx` and `ConfirmModal.jsx` components.
+  - Updates across `Dashboard.jsx`, `Vehicles.jsx`, `MaintenanceHistory.jsx`, and `AddMaintenance.jsx`.
+  - Backend API update with `PUT /api/maintenance/:id` in `server.js` and `updateEntry()` in `maintenanceRepo.js`, plus matching methods in `mockApi.js` and `httpApi.js`.
+  - CSV export utility directly in the client.
+- **What I kept, what I changed, and why:**
+  - I tested the date range filters and noticed that unlabeled date pickers were confusing to use, so I explicitly requested clear "From date" and "To date" labels and aligned input boxes.
+  - I verified that editing a maintenance record's mileage correctly syncs with the vehicle's `current_mileage` in PostgreSQL.
+  - I kept the CSV export lightweight without external heavy dependencies.
+- **Commit:** (Current session changes)
+
 ---
 
 ## 2. Where the AI got it wrong
@@ -77,6 +97,20 @@ graded as the finals badge, and it is worth 100 points.
 - **What was wrong with it:** PostgreSQL's `bin` folder is not automatically added to the Windows PATH. The command failed with "psql is not recognised" immediately after a fresh install.
 - **What I did instead:** I found the PostgreSQL installation directory (`C:\Program Files\PostgreSQL\18\bin`) and added it to the user PATH variable permanently using PowerShell. This is a Windows-specific step that the instructions did not mention.
 - **Commit:** [98b4143](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/98b4143)
+
+### Case 4 - Blank page on Add Maintenance after navigation
+
+- **What it gave me:** When navigating to the Add Maintenance screen, the component crashed or rendered a blank screen because it assumed the vehicle state was already loaded and attempted to read properties on undefined before the async fetch completed.
+- **What was wrong with it:** A race condition where `vehicle` was undefined during initial render before `listVehicles()` resolved, causing a runtime crash on property access (`vehicle.currentMileage`).
+- **What I did instead:** Added proper loading guards and a spinner state in `AddMaintenance.jsx` while the vehicle data resolves, preventing the crash and showing a clean loading indicator.
+- **Commit:** (Current session changes)
+
+### Case 5 - Cryptic mileage validation message
+
+- **What it gave me:** The initial form validation displayed a raw mathematical expression like `"Mileage >= vehicle.currentMileage"`.
+- **What was wrong with it:** It looked like raw code and didn't clearly communicate to the driver or shop user what the issue was or what the current odometer reading actually was.
+- **What I did instead:** I had it rewritten in natural English: `"Mileage should be greater than or equal to the current vehicle mileage (X km)"`, explicitly formatting the current vehicle's mileage with thousand separators.
+- **Commit:** (Current session changes)
 
 ---
 

@@ -68,7 +68,11 @@ NODE_ENV=development
 **3. Create tables and load sample data**
 
 ```bash
+# Option 1: Load sample seed data
 npm run db:reset
+
+# Option 2: Restore from a PostgreSQL backup dump (if available)
+psql -U postgres -d garahe -f garahe-db-backup.sql
 ```
 
 **4. Configure the client**
@@ -111,15 +115,35 @@ You should see your vehicles listed and be able to add new maintenance entries. 
 
 ## Features and usage
 
-### Vehicles
-- Add a vehicle by entering its model name and current mileage.
-- Each vehicle card shows the current mileage, updated automatically when a new maintenance entry has a higher mileage.
-- Delete a vehicle — all associated maintenance entries are removed automatically.
+### Interactive Dashboard
+- **Metric Summary Cards:** Quick stats displaying Total Vehicles, Total Service Jobs logged, Total Expenditure (₱), and Date of Last Recorded Service.
+- **Clickable Recent Activity:** Displays the latest service entries across all vehicles; clicking any entry routes directly to that vehicle's maintenance history.
+- **Empty States:** Clear visual prompts and quick-action links when no vehicles or logs are present.
 
-### Maintenance entries
-- Select a vehicle, then log a job with: job type, date, mileage at time of service, cost (₱), and optional notes.
-- Entries are listed newest-first per vehicle.
-- Delete individual entries.
+### Vehicle Management
+- **Add & Edit Vehicles:** Register vehicles with model name and current odometer reading (km), with live in-place editing.
+- **Vehicle Metrics:** Individual vehicle cards highlight odometer reading, total service logs, total cost spent, and last service date.
+- **Search Vehicles:** Real-time search filter by vehicle model name.
+- **Safe Deletion:** Reusable confirmation modal prevents accidental deletion; deleting a vehicle automatically cascades and removes its maintenance history.
+
+### Maintenance Logging & History
+- **Comprehensive Logging:** Record service jobs with preset categories (PMS, Oil Change, Brake Pads, Tire Rotation, Battery Replacement, Spark Plugs, Coolant Flush, Transmission Fluid, etc.) or custom entries.
+- **Intelligent Mileage Validation:** Checks odometer input against current vehicle mileage with clear, human-readable error messages showing the vehicle's current km reading.
+- **Date Protection:** Disallows accidental future dates on service entries.
+- **In-Place Editing:** Update past maintenance records directly from the history view, with automatic vehicle mileage synchronization.
+- **Advanced Filtering & Search:**
+  - Keyword search across job types and notes.
+  - Job type dropdown filter.
+  - Explicit, user-friendly date range filters ("From date" and "To date") with a single-click reset.
+  - Sorting by Newest first, Oldest first, or Highest cost.
+- **Cost Analytics:** Live summary of total filtered entries and total cost spent.
+- **CSV Data Export:** One-click export of vehicle maintenance logs into `.csv` spreadsheets for offline backup or records.
+
+### User Experience & Architecture
+- **Toast Notifications:** Automatic feedback for create, update, delete, and error operations.
+- **Custom Confirmation Modals:** Smooth, non-disruptive dialogs replacing standard browser alert/confirm popups.
+- **Dynamic Document Titles:** Custom hook updating browser tab titles per screen for better usability.
+- **Dual API Support:** Toggle effortlessly between browser `localStorage` demo mode and the full Express + PostgreSQL backend with a single environment variable (`VITE_USE_MOCK_API`).
 
 ### API endpoints
 
@@ -131,6 +155,7 @@ You should see your vehicles listed and be able to add new maintenance entries. 
 | `DELETE` | `/api/vehicles/:id` | Delete a vehicle and its entries |
 | `GET` | `/api/maintenance?vehicleId=N` | List entries (filter by vehicle optional) |
 | `POST` | `/api/maintenance` | Add a maintenance entry |
+| `PUT` | `/api/maintenance/:id` | Update a maintenance entry (syncs vehicle mileage) |
 | `DELETE` | `/api/maintenance/:id` | Delete a maintenance entry |
 | `GET` | `/healthz` | Process health check |
 | `GET` | `/readyz` | Database health check |
@@ -148,7 +173,17 @@ garahe-vehicle-maintenance-system/
 │   │   │   ├── mockApi.js      # Browser-only fake backend (localStorage)
 │   │   │   ├── httpApi.js      # Real API calls to Express server
 │   │   │   └── seed.json       # Sample data for demo mode
-│   │   ├── components/         # Dashboard, VehicleList, AddMaintenance, etc.
+│   │   ├── components/         # UI Components
+│   │   │   ├── Dashboard.jsx   # Stats overview and recent activity
+│   │   │   ├── Vehicles.jsx    # Vehicle listing, search, add, and edit
+│   │   │   ├── AddMaintenance.jsx # Form with validation for logging jobs
+│   │   │   ├── MaintenanceHistory.jsx # Filterable table, inline edit, CSV export
+│   │   │   ├── ConfirmModal.jsx # Accessible confirmation modal dialog
+│   │   │   ├── Toast.jsx       # Floating notification alert system
+│   │   │   └── DemoNotice.jsx  # Notification banner for demo mode
+│   │   ├── hooks/
+│   │   │   └── usePageTitle.js # Document title manager
+│   │   ├── styles.css          # Dark slate theme and responsive layout
 │   │   └── main.jsx            # App entry point and routing
 │   ├── .env.example            # Client environment variable template
 │   └── index.html
@@ -158,7 +193,7 @@ garahe-vehicle-maintenance-system/
 │   │   ├── seed.sql            # Sample data for development
 │   │   ├── pool.js             # PostgreSQL connection pool
 │   │   └── run.js              # Utility to run .sql files
-│   ├── maintenanceRepo.js      # Parameterised SQL queries
+│   ├── maintenanceRepo.js      # Parameterised SQL queries (CRUD)
 │   ├── server.js               # Express routes and validation
 │   └── .env.example            # Server environment variable template
 ├── docs/                       # Assignment templates and guides
@@ -169,12 +204,19 @@ garahe-vehicle-maintenance-system/
 
 ---
 
-## Known issues and next steps
+## Known issues and upcoming roadmap
 
-- **No authentication.** Any visitor to the deployed site can add or delete data. User accounts are not implemented.
-- **No edit for maintenance entries.** Entries can be added and deleted but not edited in place.
-- **Deployment not yet done.** The API and database are running locally only. The GitHub Pages site still runs in demo mode.
-- **Next steps:** Deploy the Express API (Render) and PostgreSQL database (Neon), wire up the live environment variables in the GitHub Actions workflow, and add the live URLs to this README.
+### Known limitations
+- **No authentication.** User accounts and JWT-based authentication are not yet implemented. Any visitor to the live site can view or modify records.
+- **Local deployment.** The Express API and PostgreSQL database are currently configured for local development.
+
+### Upcoming roadmap & recommended features
+- **Service Interval Alerts & Reminders:** Automated reminders based on elapsed mileage (e.g. every 5,000 km) or elapsed time (e.g. every 6 months) for oil changes, PMS, and tire rotation.
+- **Fuel Consumption & Mileage Tracking:** Log fuel fill-ups (liters, cost, trip meter) to track fuel efficiency (km/L) and total cost of ownership.
+- **Photo & Receipt Attachments:** Upload and attach invoices, parts receipts, or work orders to maintenance logs.
+- **PDF Report Generation:** One-click downloadable maintenance summary reports formatted for insurance, vehicle resale, or service history documentation.
+- **User Authentication:** Multi-tenant user login and registration to securely isolate personal garages.
+- **Production Deployment:** Host PostgreSQL database on Neon, deploy Express API on Render, and host the React client on GitHub Pages.
 
 ---
 

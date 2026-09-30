@@ -167,6 +167,19 @@ app.post('/api/maintenance', async (request, response, next) => {
   }
 })
 
+app.put('/api/maintenance/:id', async (request, response, next) => {
+  const { errors, value } = validateEntry(request.body ?? {})
+  if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
+
+  try {
+    const row = await repo.updateEntry(pool, request.params.id, value)
+    if (!row) return response.status(404).json({ error: 'Entry not found' })
+    response.json(row)
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.delete('/api/maintenance/:id', async (request, response, next) => {
   try {
     const removed = await repo.deleteEntry(pool, request.params.id)

@@ -11,6 +11,11 @@ build/
 # Database dumps: a full plain-text copy of your data
 *.dump
 backup*.sql
+*backup*.sql
+garahe-db-backup.sql
+
+# Local handovers and machine transfer notes
+HANDOVER.md
 
 # Editor and OS noise
 .DS_Store

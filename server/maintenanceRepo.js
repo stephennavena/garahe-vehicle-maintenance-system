@@ -94,6 +94,26 @@ export async function createEntry(pool, { vehicle_id, job_type, date, mileage, c
   return result.rows[0]
 }
 
+export async function updateEntry(pool, id, { vehicle_id, job_type, date, mileage, cost, notes }) {
+  const result = await pool.query(
+    `UPDATE maintenance_entries
+     SET job_type = $1, date = $2, mileage = $3, cost = $4, notes = $5
+     WHERE id = $6
+     RETURNING *`,
+    [job_type, date, mileage, cost ?? 0, notes ?? '', id]
+  )
+  if (!result.rows[0]) return null
+
+  // Keep vehicle mileage in sync
+  await pool.query(
+    `UPDATE vehicles SET current_mileage = $1
+     WHERE id = $2 AND current_mileage < $1`,
+    [mileage, vehicle_id]
+  )
+
+  return result.rows[0]
+}
+
 export async function deleteEntry(pool, id) {
   const result = await pool.query(
     'DELETE FROM maintenance_entries WHERE id = $1 RETURNING id',

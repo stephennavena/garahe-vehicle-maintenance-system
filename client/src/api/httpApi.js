@@ -120,6 +120,21 @@ export async function createMaintenanceEntry(input) {
   return normaliseEntry(row)
 }
 
+export async function updateMaintenanceEntry(id, input) {
+  const row = await request(`/api/maintenance/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      vehicle_id: input.vehicleId ?? input.vehicle_id,
+      job_type: input.jobType ?? input.job_type,
+      date: input.date,
+      mileage: input.mileage,
+      cost: input.cost ?? 0,
+      notes: input.notes ?? '',
+    }),
+  })
+  return normaliseEntry(row)
+}
+
 export async function deleteMaintenanceEntry(id) {
   await request(`/api/maintenance/${id}`, { method: 'DELETE' })
 }

@@ -111,6 +111,18 @@ export async function createMaintenanceEntry(input) {
   return created
 }
 
+export async function updateMaintenanceEntry(id, input) {
+  await delay()
+  const data = read()
+  const rows = data.maintenanceEntries || []
+  const index = rows.findIndex((row) => String(row.id) === String(id))
+  if (index === -1) throw new Error('Not found')
+  rows[index] = { ...rows[index], ...input }
+  data.maintenanceEntries = rows
+  write(data)
+  return rows[index]
+}
+
 export async function deleteMaintenanceEntry(id) {
   await delay()
   const data = read()
