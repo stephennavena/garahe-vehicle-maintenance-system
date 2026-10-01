@@ -19,17 +19,14 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
 
 app.use(helmet())
 app.use(cors({ origin: allowedOrigins }))
-app.use(express.json({ limit: '100kb' }))
+app.use(express.json({ limit: '2mb' })) // allow larger payloads for photo URLs
 
 // ── Health checks ────────────────────────────────────────────────────────────
 
-// Is the process alive?
 app.get('/healthz', (request, response) => {
   response.json({ ok: true })
 })
 
-// Is the database reachable? A different question, and the one that tells you
-// in two seconds which half of a problem you have.
 app.get('/readyz', async (request, response) => {
   try {
     await pool.query('SELECT 1')
@@ -46,6 +43,7 @@ function validateVehicle(body) {
   const errors = []
   const model = typeof body.model === 'string' ? body.model.trim() : ''
   const current_mileage = Number(body.current_mileage)
+  const photo_url = typeof body.photo_url === 'string' ? body.photo_url.trim() : ''
 
   if (!model) errors.push('model is required')
   if (model.length > 120) errors.push('model must be 120 characters or fewer')
@@ -53,7 +51,7 @@ function validateVehicle(body) {
     errors.push('current_mileage must be a non-negative whole number')
   }
 
-  return { errors, value: { model, current_mileage } }
+  return { errors, value: { model, current_mileage, photo_url } }
 }
 
 function validateEntry(body) {
@@ -64,6 +62,8 @@ function validateEntry(body) {
   const mileage = Number(body.mileage)
   const cost = Number(body.cost)
   const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
+  const next_due_km = body.next_due_km != null ? Number(body.next_due_km) : null
+  const shop_name = typeof body.shop_name === 'string' ? body.shop_name.trim() : ''
 
   if (!Number.isInteger(vehicle_id) || vehicle_id < 1) errors.push('vehicle_id must be a valid vehicle id')
   if (!job_type) errors.push('job_type is required')
@@ -72,8 +72,31 @@ function validateEntry(body) {
   if (!Number.isInteger(mileage) || mileage < 0) errors.push('mileage must be a non-negative whole number')
   if (isNaN(cost) || cost < 0) errors.push('cost must be a non-negative number')
   if (notes.length > 2000) errors.push('notes must be 2000 characters or fewer')
+  if (next_due_km != null && (!Number.isInteger(next_due_km) || next_due_km < 0)) {
+    errors.push('next_due_km must be a non-negative whole number')
+  }
+  if (shop_name.length > 200) errors.push('shop_name must be 200 characters or fewer')
 
-  return { errors, value: { vehicle_id, job_type, date, mileage, cost, notes } }
+  return { errors, value: { vehicle_id, job_type, date, mileage, cost, notes, next_due_km, shop_name } }
+}
+
+function validateFuelLog(body) {
+  const errors = []
+  const vehicle_id = Number(body.vehicle_id)
+  const date = typeof body.date === 'string' ? body.date.trim() : ''
+  const mileage = Number(body.mileage)
+  const liters = Number(body.liters)
+  const price_per_liter = Number(body.price_per_liter)
+  const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
+
+  if (!Number.isInteger(vehicle_id) || vehicle_id < 1) errors.push('vehicle_id must be a valid vehicle id')
+  if (!date || isNaN(Date.parse(date))) errors.push('date must be a valid date (YYYY-MM-DD)')
+  if (!Number.isInteger(mileage) || mileage < 0) errors.push('mileage must be a non-negative whole number')
+  if (isNaN(liters) || liters <= 0) errors.push('liters must be a positive number')
+  if (isNaN(price_per_liter) || price_per_liter <= 0) errors.push('price_per_liter must be a positive number')
+  if (notes.length > 2000) errors.push('notes must be 2000 characters or fewer')
+
+  return { errors, value: { vehicle_id, date, mileage, liters, price_per_liter, notes } }
 }
 
 // ── Vehicle routes ────────────────────────────────────────────────────────────
@@ -132,11 +155,6 @@ app.delete('/api/vehicles/:id', async (request, response, next) => {
 
 // ── Maintenance entry routes ───────────────────────────────────────────────────
 
-// GET /api/maintenance           — all entries (optional ?vehicleId=N filter)
-// GET /api/maintenance/:id       — one entry
-// POST /api/maintenance          — create entry
-// DELETE /api/maintenance/:id    — delete entry
-
 app.get('/api/maintenance', async (request, response, next) => {
   try {
     const { vehicleId } = request.query
@@ -190,21 +208,62 @@ app.delete('/api/maintenance/:id', async (request, response, next) => {
   }
 })
 
+// ── Fuel log routes ───────────────────────────────────────────────────────────
+
+app.get('/api/fuel', async (request, response, next) => {
+  try {
+    const { vehicleId } = request.query
+    response.json(await repo.getAllFuelLogs(pool, vehicleId || null))
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/fuel', async (request, response, next) => {
+  const { errors, value } = validateFuelLog(request.body ?? {})
+  if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
+
+  try {
+    response.status(201).json(await repo.createFuelLog(pool, value))
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.put('/api/fuel/:id', async (request, response, next) => {
+  const { errors, value } = validateFuelLog(request.body ?? {})
+  if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
+
+  try {
+    const row = await repo.updateFuelLog(pool, request.params.id, value)
+    if (!row) return response.status(404).json({ error: 'Fuel log not found' })
+    response.json(row)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.delete('/api/fuel/:id', async (request, response, next) => {
+  try {
+    const removed = await repo.deleteFuelLog(pool, request.params.id)
+    if (!removed) return response.status(404).json({ error: 'Fuel log not found' })
+    response.status(204).end()
+  } catch (error) {
+    next(error)
+  }
+})
+
 // ── Catch-all & error handler ─────────────────────────────────────────────────
 
 app.use((request, response) => {
   response.status(404).json({ error: 'No such route' })
 })
 
-// The detail goes in your logs; the visitor gets a plain message. Sending a
-// stack trace to a stranger tells them about your file layout and dependencies.
 app.use((error, request, response, next) => {
   console.error(error)
   response.status(500).json({ error: 'Something went wrong on the server' })
 })
 
-// The host chooses the port and tells you through PORT. Hardcoding 3000 is the
-// commonest reason a first deploy is marked unhealthy and killed.
 const port = process.env.PORT || 3000
 
 app.listen(port, () => {

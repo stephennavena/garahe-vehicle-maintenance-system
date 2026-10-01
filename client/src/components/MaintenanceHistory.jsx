@@ -1,16 +1,38 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getVehicle, listMaintenanceEntries, updateMaintenanceEntry, deleteMaintenanceEntry } from '../api';
+import { getVehicle, listMaintenanceEntries, updateMaintenanceEntry, deleteMaintenanceEntry, updateVehicle } from '../api';
 import ConfirmModal from './ConfirmModal';
 import { useToast, ToastContainer } from './Toast';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { computeReminders } from '../utils/serviceReminders';
 
 const JOB_TYPES = [
-  'Oil Change', 'Brake Pads', 'Brake Fluid', 'Tire Change', 'Tire Rotation',
+  'PMS', 'Oil Change', 'Brake Pads', 'Brake Fluid', 'Tire Change', 'Tire Rotation',
   'Air Filter', 'Cabin Filter', 'Battery Replacement', 'Spark Plugs',
   'Coolant Flush', 'Transmission Service', 'Wheel Alignment', 'Suspension',
   'Timing Belt', 'Wiper Blades', 'General Inspection', 'Other',
 ];
+
+function exportCSV(vehicle, entries) {
+  const headers = ['Date', 'Job Type', 'Mileage (km)', 'Cost (₱)', 'Next Due (km)', 'Shop', 'Notes'];
+  const rows = entries.map(e => [
+    e.date,
+    `"${(e.jobType || '').replace(/"/g, '""')}"`,
+    e.mileage,
+    e.cost,
+    e.nextDueKm ?? '',
+    `"${(e.shopName || '').replace(/"/g, '""')}"`,
+    `"${(e.notes || '').replace(/"/g, '""')}"`,
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${vehicle.model.replace(/\s+/g, '-')}-maintenance.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function MaintenanceHistory() {
   const { id } = useParams();
@@ -21,7 +43,7 @@ export default function MaintenanceHistory() {
   const [filterJobType, setFilterJobType] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [sortOrder, setSortOrder] = useState('date-desc'); // date-desc | date-asc | cost-desc
+  const [sortOrder, setSortOrder] = useState('date-desc');
 
   // Edit state
   const [editingEntry, setEditingEntry] = useState(null);
@@ -31,12 +53,15 @@ export default function MaintenanceHistory() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  // Mileage update
+  const [showMileageUpdate, setShowMileageUpdate] = useState(false);
+  const [newMileage, setNewMileage] = useState('');
+  const [mileageSaving, setMileageSaving] = useState(false);
+
   const { toasts, showToast } = useToast();
 
-  // Dynamic title: shows vehicle model once loaded
   usePageTitle(vehicle ? `${vehicle.model} – History` : 'Maintenance History');
 
-  // Escape key: cancel inline edit
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape' && editingEntry) setEditingEntry(null);
   }, [editingEntry]);
@@ -87,14 +112,16 @@ export default function MaintenanceHistory() {
       mileage: String(entry.mileage),
       cost: String(entry.cost),
       notes: entry.notes || '',
+      nextDueKm: entry.nextDueKm != null ? String(entry.nextDueKm) : '',
+      shopName: entry.shopName || '',
     });
   }
 
   async function handleEditSubmit(e) {
     e.preventDefault();
-    // Validate
     const mileage = parseInt(editForm.mileage) || 0;
     const cost = parseFloat(editForm.cost) || 0;
+    const nextDueKm = editForm.nextDueKm ? parseInt(editForm.nextDueKm) : null;
     if (mileage < 0) { showToast('Mileage cannot be negative.', 'error'); return; }
     if (editForm.date > today) { showToast('Date cannot be in the future.', 'error'); return; }
     if (cost < 0) { showToast('Cost cannot be negative.', 'error'); return; }
@@ -108,6 +135,8 @@ export default function MaintenanceHistory() {
         mileage,
         cost,
         notes: editForm.notes,
+        nextDueKm,
+        shopName: editForm.shopName || '',
       });
       setEditingEntry(null);
       showToast('Record updated!', 'success');
@@ -119,12 +148,36 @@ export default function MaintenanceHistory() {
     }
   }
 
+  // ── Mileage update without maintenance ────────────────────────────────────
+  async function handleMileageUpdate(e) {
+    e.preventDefault();
+    const km = parseInt(newMileage);
+    if (!km || km < 0) { showToast('Enter a valid mileage.', 'error'); return; }
+    if (vehicle && km < vehicle.currentMileage) {
+      showToast(`Mileage must be greater than current (${vehicle.currentMileage.toLocaleString()} km).`, 'error');
+      return;
+    }
+    setMileageSaving(true);
+    try {
+      await updateVehicle(id, { model: vehicle.model, currentMileage: km, photoUrl: vehicle.photoUrl || '' });
+      setShowMileageUpdate(false);
+      setNewMileage('');
+      showToast('Odometer updated!', 'success');
+      loadData();
+    } catch (err) {
+      showToast('Failed to update mileage.', 'error');
+    } finally {
+      setMileageSaving(false);
+    }
+  }
+
   // ── Filtering & sorting ────────────────────────────────────────────────────
   let filtered = entries.filter(e => {
     const searchLower = search.toLowerCase();
     const matchesSearch = !search ||
       e.jobType.toLowerCase().includes(searchLower) ||
-      (e.notes && e.notes.toLowerCase().includes(searchLower));
+      (e.notes && e.notes.toLowerCase().includes(searchLower)) ||
+      (e.shopName && e.shopName.toLowerCase().includes(searchLower));
     const matchesType = !filterJobType || e.jobType === filterJobType;
     const matchesFrom = !filterDateFrom || e.date >= filterDateFrom;
     const matchesTo = !filterDateTo || e.date <= filterDateTo;
@@ -140,7 +193,21 @@ export default function MaintenanceHistory() {
     ? [...entries].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date
     : 'N/A';
 
-  // Job types present in this vehicle's records for filter dropdown
+  // Cost per km
+  const firstEntry = entries.length > 0
+    ? [...entries].sort((a, b) => new Date(a.date) - new Date(b.date))[0]
+    : null;
+  const kmDriven = firstEntry && vehicle
+    ? Math.max(0, vehicle.currentMileage - firstEntry.mileage)
+    : 0;
+  const costPerKm = kmDriven > 0 ? (totalCost / kmDriven).toFixed(2) : null;
+
+  // Reminders
+  const reminders = vehicle ? computeReminders(entries, vehicle.currentMileage) : [];
+  const overdueReminders = reminders.filter(r => r.status === 'overdue');
+  const dueSoonReminders = reminders.filter(r => r.status === 'due-soon');
+
+  // Job types for filter dropdown
   const presentJobTypes = [...new Set(entries.map(e => e.jobType))].sort();
 
   if (loading) {
@@ -174,13 +241,66 @@ export default function MaintenanceHistory() {
             <strong style={{ color: 'var(--text-primary)' }}>{vehicle.model}</strong>
             &nbsp;|&nbsp;
             {vehicle.currentMileage.toLocaleString()} km
+            &nbsp;
+            <button
+              className="btn btn-outline"
+              style={{ padding: '0.15rem 0.55rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}
+              onClick={() => { setShowMileageUpdate(!showMileageUpdate); setNewMileage(''); }}
+              title="Update odometer reading without adding maintenance"
+            >
+              Update km
+            </button>
           </p>
+          {showMileageUpdate && (
+            <form onSubmit={handleMileageUpdate} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', alignItems: 'center' }}>
+              <input
+                type="number"
+                className="form-control"
+                style={{ width: '160px' }}
+                value={newMileage}
+                min={vehicle.currentMileage}
+                placeholder={`> ${vehicle.currentMileage.toLocaleString()} km`}
+                onChange={e => setNewMileage(e.target.value)}
+                autoFocus
+              />
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1rem' }} disabled={mileageSaving}>
+                {mileageSaving ? '...' : 'Save'}
+              </button>
+              <button type="button" className="btn btn-outline" style={{ padding: '0.5rem 0.75rem' }} onClick={() => setShowMileageUpdate(false)}>
+                Cancel
+              </button>
+            </form>
+          )}
         </div>
         <div className="flex-gap">
+          <button
+            className="btn btn-outline"
+            onClick={() => exportCSV(vehicle, entries)}
+            disabled={entries.length === 0}
+            title="Export to CSV"
+          >
+            ↓ CSV
+          </button>
           <Link to="/vehicles" className="btn btn-outline">← Back</Link>
           <Link to={`/vehicles/${id}/add-maintenance`} className="btn btn-primary">+ Add Maintenance</Link>
         </div>
       </div>
+
+      {/* Reminders */}
+      {(overdueReminders.length > 0 || dueSoonReminders.length > 0) && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          {overdueReminders.map((r, i) => (
+            <div key={i} className="alert-banner alert-overdue" style={{ marginBottom: '0.5rem' }}>
+              🔴 <strong>{r.jobType}</strong> — {r.detail}
+            </div>
+          ))}
+          {dueSoonReminders.map((r, i) => (
+            <div key={i} className="alert-banner alert-due-soon" style={{ marginBottom: '0.5rem' }}>
+              🟡 <strong>{r.jobType}</strong> — {r.detail}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="stat-grid" style={{ marginBottom: '2rem' }}>
@@ -196,6 +316,12 @@ export default function MaintenanceHistory() {
           <p className="text-muted stat-label">Last Service</p>
           <p className="stat-value" style={{ fontSize: '1.2rem' }}>{lastService}</p>
         </div>
+        {costPerKm && (
+          <div className="card stat-card">
+            <p className="text-muted stat-label">Cost per km</p>
+            <p className="stat-value" style={{ fontSize: '1.25rem' }}>₱{costPerKm}</p>
+          </div>
+        )}
       </div>
 
       {/* Filters & Sort */}
@@ -203,7 +329,7 @@ export default function MaintenanceHistory() {
         <input
           type="text"
           className="form-control"
-          placeholder="Search job or notes..."
+          placeholder="Search job, shop, or notes..."
           style={{ flex: 1, minWidth: '160px' }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -220,7 +346,6 @@ export default function MaintenanceHistory() {
           ))}
         </select>
 
-        {/* Date range filter — labelled for clarity */}
         <div className="date-range-group">
           <div className="date-range-field">
             <label className="date-range-label">From date</label>
@@ -318,6 +443,18 @@ export default function MaintenanceHistory() {
                           value={editForm.cost} onChange={e => setEditForm(f => ({ ...f, cost: e.target.value }))} required />
                       </div>
                     </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Next Due (km) <span className="text-muted">(optional)</span></label>
+                      <input type="number" className="form-control" min="0" value={editForm.nextDueKm}
+                        placeholder="e.g. 90000"
+                        onChange={e => setEditForm(f => ({ ...f, nextDueKm: e.target.value }))} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Shop <span className="text-muted">(optional)</span></label>
+                      <input type="text" className="form-control" value={editForm.shopName}
+                        placeholder="e.g. Midas BGC"
+                        onChange={e => setEditForm(f => ({ ...f, shopName: e.target.value }))} />
+                    </div>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Notes</label>
@@ -334,7 +471,13 @@ export default function MaintenanceHistory() {
                 <div className="maintenance-card">
                   <div className="mc-job">
                     <strong style={{ display: 'block', color: 'var(--accent-color)' }}>{e.jobType}</strong>
-                    {e.notes && <span className="text-muted" style={{ fontSize: '0.8rem' }}>{e.notes}</span>}
+                    {e.shopName && <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>📍 {e.shopName}</span>}
+                    {e.notes && <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginTop: '0.15rem' }}>{e.notes}</span>}
+                    {e.nextDueKm != null && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--warning-color)', marginTop: '0.15rem', display: 'block' }}>
+                        🔔 Next due: {Number(e.nextDueKm).toLocaleString()} km
+                      </span>
+                    )}
                   </div>
                   <div className="mc-date">{e.date}</div>
                   <div className="mc-mileage">{Number(e.mileage).toLocaleString()} km</div>

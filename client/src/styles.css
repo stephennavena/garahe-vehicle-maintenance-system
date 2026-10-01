@@ -314,6 +314,21 @@ h2 {
   font-size: 0.875rem;
 }
 
+/* Vehicle photo preview */
+.vehicle-photo-preview {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.2);
+}
+
+.vehicle-photo-preview img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
 /* Badge */
 .badge-vehicle {
   display: inline-block;
@@ -324,6 +339,60 @@ h2 {
   border-radius: 999px;
   font-weight: 500;
   margin-left: 0.5rem;
+}
+
+/* Service reminder badges */
+.reminder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.badge-overdue {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-due-soon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Alert banners */
+.alerts-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.alert-overdue {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.alert-due-soon {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
 }
 
 /* Recent entry cards on dashboard */
@@ -350,7 +419,8 @@ h2 {
 }
 
 /* Maintenance list card */
-.maintenance-card {
+.maintenance-card,
+.fuel-log-card {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr auto;
   gap: 1rem;
@@ -583,6 +653,41 @@ select.form-control {
   padding-right: 2.5rem;
 }
 
+/* Spending chart */
+.spending-chart-card {
+  padding: 1.5rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+/* Job line items (multiple jobs per visit) */
+.job-line-card {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+/* Cost summary for multi-job form */
+.cost-summary {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .navbar {
@@ -609,7 +714,8 @@ select.form-control {
     gap: 1rem;
   }
 
-  .maintenance-card {
+  .maintenance-card,
+  .fuel-log-card {
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
@@ -678,5 +784,14 @@ select.form-control {
     left: 1rem;
     right: 1rem;
     bottom: 1rem;
+  }
+
+  .alerts-row {
+    gap: 0.35rem;
+  }
+
+  .flex-gap {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 }

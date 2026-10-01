@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import Vehicles from './components/Vehicles';
 import MaintenanceHistory from './components/MaintenanceHistory';
 import AddMaintenance from './components/AddMaintenance';
+import FuelLog from './components/FuelLog';
 import './styles.css';
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="vehicles" element={<Vehicles />} />
           <Route path="vehicles/:id/history" element={<MaintenanceHistory />} />
           <Route path="vehicles/:id/add-maintenance" element={<AddMaintenance />} />
+          <Route path="vehicles/:id/fuel" element={<FuelLog />} />
         </Route>
       </Routes>
     </Router>

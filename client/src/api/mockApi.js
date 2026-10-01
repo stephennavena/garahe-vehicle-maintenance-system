@@ -8,9 +8,6 @@ import seed from './seed.json'
 
 const KEY = 'garahe:data'
 
-// A real network is not instant. Keeping this delay is what forces you to build
-// a loading state now, while it is cheap, instead of discovering you need one
-// the day you switch to the real API.
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function read() {
@@ -19,7 +16,6 @@ function read() {
     try {
       return JSON.parse(stored)
     } catch {
-      // Corrupted storage. Start again rather than crashing the app.
       localStorage.removeItem(KEY)
     }
   }
@@ -36,14 +32,17 @@ function write(data) {
 
 export async function listVehicles() {
   await delay()
-  return read().vehicles || []
+  return (read().vehicles || []).map(v => ({
+    ...v,
+    photoUrl: v.photoUrl || '',
+  }))
 }
 
 export async function getVehicle(id) {
   await delay()
   const found = (read().vehicles || []).find((row) => String(row.id) === String(id))
   if (!found) throw new Error('Not found')
-  return found
+  return { ...found, photoUrl: found.photoUrl || '' }
 }
 
 export async function createVehicle(input) {
@@ -51,6 +50,7 @@ export async function createVehicle(input) {
   const data = read()
   const created = {
     ...input,
+    photoUrl: input.photoUrl || '',
     id: crypto.randomUUID()
   }
   data.vehicles = [...(data.vehicles || []), created]
@@ -74,8 +74,8 @@ export async function deleteVehicle(id) {
   await delay()
   const data = read()
   data.vehicles = (data.vehicles || []).filter((row) => String(row.id) !== String(id))
-  // Optional: also delete associated maintenance entries
   data.maintenanceEntries = (data.maintenanceEntries || []).filter((row) => String(row.vehicleId) !== String(id))
+  data.fuelLogs = (data.fuelLogs || []).filter((row) => String(row.vehicleId) !== String(id))
   write(data)
 }
 
@@ -83,7 +83,11 @@ export async function deleteVehicle(id) {
 
 export async function listMaintenanceEntries(vehicleId) {
   await delay()
-  const entries = read().maintenanceEntries || []
+  const entries = (read().maintenanceEntries || []).map(e => ({
+    ...e,
+    nextDueKm: e.nextDueKm ?? null,
+    shopName: e.shopName || '',
+  }))
   if (vehicleId) {
     return entries.filter(e => String(e.vehicleId) === String(vehicleId)).sort((a, b) => new Date(b.date) - new Date(a.date))
   }
@@ -95,15 +99,17 @@ export async function createMaintenanceEntry(input) {
   const data = read()
   const created = {
     ...input,
+    nextDueKm: input.nextDueKm ?? null,
+    shopName: input.shopName || '',
     id: crypto.randomUUID()
   }
   data.maintenanceEntries = [...(data.maintenanceEntries || []), created]
-  
-  // Optional: Update vehicle's current mileage if this entry's mileage is higher
+
+  // Update vehicle's current mileage if this entry's mileage is higher
   const vehicles = data.vehicles || []
   const vIndex = vehicles.findIndex(v => String(v.id) === String(input.vehicleId))
   if (vIndex !== -1 && input.mileage > vehicles[vIndex].currentMileage) {
-      vehicles[vIndex].currentMileage = input.mileage;
+    vehicles[vIndex].currentMileage = input.mileage;
   }
   data.vehicles = vehicles;
 
@@ -117,7 +123,7 @@ export async function updateMaintenanceEntry(id, input) {
   const rows = data.maintenanceEntries || []
   const index = rows.findIndex((row) => String(row.id) === String(id))
   if (index === -1) throw new Error('Not found')
-  rows[index] = { ...rows[index], ...input }
+  rows[index] = { ...rows[index], ...input, nextDueKm: input.nextDueKm ?? null, shopName: input.shopName || '' }
   data.maintenanceEntries = rows
   write(data)
   return rows[index]
@@ -127,5 +133,64 @@ export async function deleteMaintenanceEntry(id) {
   await delay()
   const data = read()
   data.maintenanceEntries = (data.maintenanceEntries || []).filter((row) => String(row.id) !== String(id))
+  write(data)
+}
+
+// -- FUEL LOGS --
+
+export async function listFuelLogs(vehicleId) {
+  await delay()
+  const logs = (read().fuelLogs || []).map(l => ({
+    ...l,
+    totalCost: Number(l.liters) * Number(l.pricePerLiter),
+  }))
+  if (vehicleId) {
+    return logs.filter(l => String(l.vehicleId) === String(vehicleId)).sort((a, b) => new Date(b.date) - new Date(a.date))
+  }
+  return logs.sort((a, b) => new Date(b.date) - new Date(a.date))
+}
+
+export async function createFuelLog(input) {
+  await delay()
+  const data = read()
+  const created = {
+    ...input,
+    totalCost: Number(input.liters) * Number(input.pricePerLiter),
+    id: crypto.randomUUID()
+  }
+  data.fuelLogs = [...(data.fuelLogs || []), created]
+
+  // Update vehicle mileage
+  const vehicles = data.vehicles || []
+  const vIndex = vehicles.findIndex(v => String(v.id) === String(input.vehicleId))
+  if (vIndex !== -1 && input.mileage > vehicles[vIndex].currentMileage) {
+    vehicles[vIndex].currentMileage = input.mileage;
+  }
+  data.vehicles = vehicles;
+
+  write(data)
+  return created
+}
+
+export async function updateFuelLog(id, input) {
+  await delay()
+  const data = read()
+  const rows = data.fuelLogs || []
+  const index = rows.findIndex((row) => String(row.id) === String(id))
+  if (index === -1) throw new Error('Not found')
+  rows[index] = {
+    ...rows[index],
+    ...input,
+    totalCost: Number(input.liters) * Number(input.pricePerLiter),
+  }
+  data.fuelLogs = rows
+  write(data)
+  return rows[index]
+}
+
+export async function deleteFuelLog(id) {
+  await delay()
+  const data = read()
+  data.fuelLogs = (data.fuelLogs || []).filter((row) => String(row.id) !== String(id))
   write(data)
 }

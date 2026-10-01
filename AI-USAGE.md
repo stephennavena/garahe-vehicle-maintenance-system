@@ -71,6 +71,31 @@ graded as the finals badge, and it is worth 100 points.
   - I tested the date range filters and noticed that unlabeled date pickers were confusing to use, so I explicitly requested clear "From date" and "To date" labels and aligned input boxes.
   - I verified that editing a maintenance record's mileage correctly syncs with the vehicle's `current_mileage` in PostgreSQL.
   - I kept the CSV export lightweight without external heavy dependencies.
+- **Commit:** [d67b7f2](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/d67b7f2)
+
+### 2026-10-01 - Service Reminders, Spending Analytics, Multi-Line Jobs, Shop Tracking, and Handover Polish
+
+- **Tool:** Google Antigravity (Gemini)
+- **What I asked for:**
+  1. Service Reminders / Due Soon Alerts: Automated reminders based on mileage and time intervals for standard maintenance jobs (e.g. Oil Change every 5,000 km or 6 months, PMS, brakes, tire rotation) with visual badges on vehicle cards.
+  2. Spending Chart: A monthly spending visualization on the dashboard to track maintenance costs over time.
+  3. Next Service Mileage field (`next_due_km`) on maintenance logs so owners know what odometer mark to look out for next.
+  4. Shop / Garage Name tracking (`shop_name`) so owners can record the shop or mechanic that did the job.
+  5. Multi-line job entry: Ability to record multiple service tasks in a single shop visit (e.g., Oil Change + Filter + Inspection) with individual pricing and dynamic total calculation.
+  6. Quick odometer update widget directly from vehicle cards and history without needing to create dummy maintenance entries.
+  7. Cost per km (`₱/km`) efficiency calculation.
+  8. Copy last entry pre-fill in the Add Maintenance form.
+  9. A trial fuel logging feature to test whether tracking fuel fill-ups fits the app's goals.
+- **What it gave back:**
+  - `client/src/utils/serviceReminders.js` with configurable km and time intervals for 17 standard vehicle jobs, plus overdue (🔴) and due-soon (🟡) alert calculations.
+  - `client/src/components/SpendingChart.jsx` SVG-based monthly expenditure chart.
+  - Form enhancements in `AddMaintenance.jsx` and `MaintenanceHistory.jsx` with shop name, next due km, multi-line items, and copy last entry.
+  - Quick odometer update modal/widget in `Vehicles.jsx` and `MaintenanceHistory.jsx`.
+  - Database migration script `server/db/migrate_v2.sql` and updated `server/maintenanceRepo.js` and `server/server.js` with validation.
+  - Experimental `FuelLog.jsx` component and API endpoints.
+- **What I kept, what I changed, and why:**
+  - I kept the service reminders, spending chart, multi-line job logging, shop name, and next service mileage because they directly solve core vehicle ownership pain points and make the app a real utility rather than a simple table.
+  - After testing the fuel logging feature, I determined that tracking fuel fill-ups is irrelevant to the core purpose of a vehicle maintenance log and adds unnecessary complexity. I decided to cleanly remove the fuel tracking components and routes in the next polishing session prior to deployment.
 - **Commit:** (Current session changes)
 
 ---
@@ -110,6 +135,13 @@ graded as the finals badge, and it is worth 100 points.
 - **What it gave me:** The initial form validation displayed a raw mathematical expression like `"Mileage >= vehicle.currentMileage"`.
 - **What was wrong with it:** It looked like raw code and didn't clearly communicate to the driver or shop user what the issue was or what the current odometer reading actually was.
 - **What I did instead:** I had it rewritten in natural English: `"Mileage should be greater than or equal to the current vehicle mileage (X km)"`, explicitly formatting the current vehicle's mileage with thousand separators.
+- **Commit:** (Current session changes)
+
+### Case 6 - Missing component file caused Vite HMR bundling crash
+
+- **What it gave me:** `App.jsx` imported `FuelLog` from `./components/FuelLog`, but the component file was missing from the directory during hot reloading.
+- **What was wrong with it:** The Vite development server failed module pre-transformation with `Pre-transform error: Failed to resolve import "./components/FuelLog" from "src/App.jsx"`, causing the frontend server to return 500 internal errors and rendering the local web app inaccessible.
+- **What I did instead:** I inspected the Vite server logs, identified the unresolvable import, restored the component file to ensure zero compile warnings (`npm run build`), and confirmed that both frontend (port 5173) and backend (port 3000) responded with HTTP 200 OK.
 - **Commit:** (Current session changes)
 
 ---

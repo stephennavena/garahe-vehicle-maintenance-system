@@ -37,5 +37,9 @@ export const {
   listMaintenanceEntries,
   createMaintenanceEntry,
   updateMaintenanceEntry,
-  deleteMaintenanceEntry
+  deleteMaintenanceEntry,
+  listFuelLogs,
+  createFuelLog,
+  updateFuelLog,
+  deleteFuelLog,
 } = implementation

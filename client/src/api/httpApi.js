@@ -39,6 +39,7 @@ function normaliseVehicle(row) {
     id: row.id,
     model: row.model,
     currentMileage: row.current_mileage,
+    photoUrl: row.photo_url || '',
     created_at: row.created_at,
   }
 }
@@ -53,6 +54,23 @@ function normaliseEntry(row) {
     mileage: row.mileage,
     cost: Number(row.cost),
     notes: row.notes,
+    nextDueKm: row.next_due_km ?? null,
+    shopName: row.shop_name || '',
+    created_at: row.created_at,
+  }
+}
+
+// Convert a DB fuel log row (snake_case) to the shape the UI expects
+function normaliseFuelLog(row) {
+  return {
+    id: row.id,
+    vehicleId: row.vehicle_id,
+    date: row.date ? row.date.slice(0, 10) : row.date,
+    mileage: row.mileage,
+    liters: Number(row.liters),
+    pricePerLiter: Number(row.price_per_liter),
+    totalCost: Number(row.total_cost),
+    notes: row.notes || '',
     created_at: row.created_at,
   }
 }
@@ -75,6 +93,7 @@ export async function createVehicle(input) {
     body: JSON.stringify({
       model: input.model,
       current_mileage: input.currentMileage ?? input.current_mileage ?? 0,
+      photo_url: input.photoUrl ?? input.photo_url ?? '',
     }),
   })
   return normaliseVehicle(row)
@@ -86,6 +105,7 @@ export async function updateVehicle(id, input) {
     body: JSON.stringify({
       model: input.model,
       current_mileage: input.currentMileage ?? input.current_mileage ?? 0,
+      photo_url: input.photoUrl ?? input.photo_url ?? '',
     }),
   })
   return normaliseVehicle(row)
@@ -115,6 +135,8 @@ export async function createMaintenanceEntry(input) {
       mileage: input.mileage,
       cost: input.cost ?? 0,
       notes: input.notes ?? '',
+      next_due_km: input.nextDueKm ?? input.next_due_km ?? null,
+      shop_name: input.shopName ?? input.shop_name ?? '',
     }),
   })
   return normaliseEntry(row)
@@ -130,6 +152,8 @@ export async function updateMaintenanceEntry(id, input) {
       mileage: input.mileage,
       cost: input.cost ?? 0,
       notes: input.notes ?? '',
+      next_due_km: input.nextDueKm ?? input.next_due_km ?? null,
+      shop_name: input.shopName ?? input.shop_name ?? '',
     }),
   })
   return normaliseEntry(row)
@@ -137,4 +161,46 @@ export async function updateMaintenanceEntry(id, input) {
 
 export async function deleteMaintenanceEntry(id) {
   await request(`/api/maintenance/${id}`, { method: 'DELETE' })
+}
+
+// ── Fuel logs ─────────────────────────────────────────────────────────────────
+
+export async function listFuelLogs(vehicleId) {
+  const path = vehicleId ? `/api/fuel?vehicleId=${vehicleId}` : '/api/fuel'
+  const rows = await request(path)
+  return rows.map(normaliseFuelLog)
+}
+
+export async function createFuelLog(input) {
+  const row = await request('/api/fuel', {
+    method: 'POST',
+    body: JSON.stringify({
+      vehicle_id: input.vehicleId ?? input.vehicle_id,
+      date: input.date,
+      mileage: input.mileage,
+      liters: input.liters,
+      price_per_liter: input.pricePerLiter ?? input.price_per_liter,
+      notes: input.notes ?? '',
+    }),
+  })
+  return normaliseFuelLog(row)
+}
+
+export async function updateFuelLog(id, input) {
+  const row = await request(`/api/fuel/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      vehicle_id: input.vehicleId ?? input.vehicle_id,
+      date: input.date,
+      mileage: input.mileage,
+      liters: input.liters,
+      price_per_liter: input.pricePerLiter ?? input.price_per_liter,
+      notes: input.notes ?? '',
+    }),
+  })
+  return normaliseFuelLog(row)
+}
+
+export async function deleteFuelLog(id) {
+  await request(`/api/fuel/${id}`, { method: 'DELETE' })
 }

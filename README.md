@@ -115,24 +115,34 @@ You should see your vehicles listed and be able to add new maintenance entries. 
 
 ## Features and usage
 
-### Interactive Dashboard
-- **Metric Summary Cards:** Quick stats displaying Total Vehicles, Total Service Jobs logged, Total Expenditure (₱), and Date of Last Recorded Service.
+### Interactive Dashboard & Spending Analytics
+- **Metric Summary Cards:** Quick stats displaying Total Vehicles, Total Service Jobs logged, Total Maintenance Expenditure (₱), and Date of Last Recorded Service.
+- **Monthly Spending Trend Chart:** Visual SVG monthly expenditure chart illustrating maintenance costs over time to track garage spending trends.
 - **Clickable Recent Activity:** Displays the latest service entries across all vehicles; clicking any entry routes directly to that vehicle's maintenance history.
 - **Empty States:** Clear visual prompts and quick-action links when no vehicles or logs are present.
 
+### Service Reminders & Due-Soon Alerts
+- **Intelligent Interval Tracking:** Automated reminder engine (`serviceReminders.js`) based on distance driven (km) and time elapsed (months) across 17 standard maintenance jobs (Oil Change, PMS, Brake Pads, Tire Rotation, Battery, Spark Plugs, Coolant, Transmission Fluid, etc.).
+- **Visual Alert Badges:** High-visibility Overdue (🔴) and Due Soon (🟡) badges on vehicle cards and contextual alert banners in vehicle maintenance history views.
+
 ### Vehicle Management
 - **Add & Edit Vehicles:** Register vehicles with model name and current odometer reading (km), with live in-place editing.
-- **Vehicle Metrics:** Individual vehicle cards highlight odometer reading, total service logs, total cost spent, and last service date.
+- **Vehicle Photo Support:** Support for vehicle photos with fallback avatars.
+- **Quick Odometer Update:** Directly update a vehicle's current odometer from the vehicle card or history view without creating a placeholder maintenance log.
+- **Cost per Kilometer Metric:** Automatic calculation of operating maintenance cost per km (`₱/km`) driven.
 - **Search Vehicles:** Real-time search filter by vehicle model name.
 - **Safe Deletion:** Reusable confirmation modal prevents accidental deletion; deleting a vehicle automatically cascades and removes its maintenance history.
 
 ### Maintenance Logging & History
-- **Comprehensive Logging:** Record service jobs with preset categories (PMS, Oil Change, Brake Pads, Tire Rotation, Battery Replacement, Spark Plugs, Coolant Flush, Transmission Fluid, etc.) or custom entries.
+- **Multi-Line Job Items:** Log multiple service jobs performed in a single shop visit (e.g. Oil Change + Brake Inspection + Fluid Top-up) with individual item costs and descriptions, calculating the total automatically.
+- **Shop / Garage Name Tracking:** Record the shop or technician name (e.g. "Toyota BGC", "Rapide Pasig", "Shell Helix") for warranty and service reference.
+- **Next Service Mileage Field:** Set an optional target odometer reading (`next_due_km`) for the next scheduled service.
+- **Copy Last Entry:** 1-click shortcut to pre-fill the form using details from the vehicle's most recent service log.
 - **Intelligent Mileage Validation:** Checks odometer input against current vehicle mileage with clear, human-readable error messages showing the vehicle's current km reading.
 - **Date Protection:** Disallows accidental future dates on service entries.
 - **In-Place Editing:** Update past maintenance records directly from the history view, with automatic vehicle mileage synchronization.
 - **Advanced Filtering & Search:**
-  - Keyword search across job types and notes.
+  - Keyword search across job types, shop names, and notes.
   - Job type dropdown filter.
   - Explicit, user-friendly date range filters ("From date" and "To date") with a single-click reset.
   - Sorting by Newest first, Oldest first, or Highest cost.
@@ -150,12 +160,12 @@ You should see your vehicles listed and be able to add new maintenance entries. 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/vehicles` | List all vehicles |
-| `POST` | `/api/vehicles` | Add a vehicle (`model`, `current_mileage`) |
-| `PUT` | `/api/vehicles/:id` | Update a vehicle |
+| `POST` | `/api/vehicles` | Add a vehicle (`model`, `current_mileage`, `photo_url`) |
+| `PUT` | `/api/vehicles/:id` | Update a vehicle (model, current mileage, photo) |
 | `DELETE` | `/api/vehicles/:id` | Delete a vehicle and its entries |
 | `GET` | `/api/maintenance?vehicleId=N` | List entries (filter by vehicle optional) |
-| `POST` | `/api/maintenance` | Add a maintenance entry |
-| `PUT` | `/api/maintenance/:id` | Update a maintenance entry (syncs vehicle mileage) |
+| `POST` | `/api/maintenance` | Add maintenance entry (`vehicle_id`, `date`, `mileage`, `job_type`, `cost`, `notes`, `shop_name`, `next_due_km`) |
+| `PUT` | `/api/maintenance/:id` | Update maintenance entry (syncs vehicle mileage) |
 | `DELETE` | `/api/maintenance/:id` | Delete a maintenance entry |
 | `GET` | `/healthz` | Process health check |
 | `GET` | `/readyz` | Database health check |
@@ -174,13 +184,16 @@ garahe-vehicle-maintenance-system/
 │   │   │   ├── httpApi.js      # Real API calls to Express server
 │   │   │   └── seed.json       # Sample data for demo mode
 │   │   ├── components/         # UI Components
-│   │   │   ├── Dashboard.jsx   # Stats overview and recent activity
-│   │   │   ├── Vehicles.jsx    # Vehicle listing, search, add, and edit
-│   │   │   ├── AddMaintenance.jsx # Form with validation for logging jobs
-│   │   │   ├── MaintenanceHistory.jsx # Filterable table, inline edit, CSV export
+│   │   │   ├── Dashboard.jsx   # Stats overview, spending chart, recent activity
+│   │   │   ├── SpendingChart.jsx # Monthly expenditure SVG trend chart
+│   │   │   ├── Vehicles.jsx    # Vehicle listing, badges, search, add, edit
+│   │   │   ├── AddMaintenance.jsx # Multi-line jobs, shop name, next due km, copy last entry
+│   │   │   ├── MaintenanceHistory.jsx # Filterable table, reminder banners, inline edit, CSV export
 │   │   │   ├── ConfirmModal.jsx # Accessible confirmation modal dialog
 │   │   │   ├── Toast.jsx       # Floating notification alert system
 │   │   │   └── DemoNotice.jsx  # Notification banner for demo mode
+│   │   ├── utils/
+│   │   │   └── serviceReminders.js # Interval thresholds, overdue & due-soon calculation
 │   │   ├── hooks/
 │   │   │   └── usePageTitle.js # Document title manager
 │   │   ├── styles.css          # Dark slate theme and responsive layout
@@ -189,17 +202,19 @@ garahe-vehicle-maintenance-system/
 │   └── index.html
 ├── server/                     # Express + PostgreSQL backend
 │   ├── db/
-│   │   ├── schema.sql          # Table definitions (vehicles, maintenance_entries)
+│   │   ├── schema.sql          # Base table definitions (vehicles, maintenance_entries)
+│   │   ├── migrate_v2.sql      # Schema additions (shop_name, next_due_km)
 │   │   ├── seed.sql            # Sample data for development
 │   │   ├── pool.js             # PostgreSQL connection pool
 │   │   └── run.js              # Utility to run .sql files
 │   ├── maintenanceRepo.js      # Parameterised SQL queries (CRUD)
 │   ├── server.js               # Express routes and validation
 │   └── .env.example            # Server environment variable template
-├── docs/                       # Assignment templates and guides
-├── AI-USAGE.md                 # Record of AI assistance
+├── docs/                       # Planning documents and reports
+├── AI-USAGE.md                 # Detailed log of AI prompts, changes, and errors
+├── HANDOVER.md                 # Project handover, environment state, and next steps
 ├── compose.yml                 # Docker Compose (server + database)
-└── README.md                   # This file
+└── README.md                   # Project overview and documentation
 ```
 
 ---
@@ -208,15 +223,19 @@ garahe-vehicle-maintenance-system/
 
 ### Known limitations
 - **No authentication.** User accounts and JWT-based authentication are not yet implemented. Any visitor to the live site can view or modify records.
-- **Local deployment.** The Express API and PostgreSQL database are currently configured for local development.
+- **Local deployment.** The Express API and PostgreSQL database are currently running locally pending production deployment.
 
-### Upcoming roadmap & recommended features
-- **Service Interval Alerts & Reminders:** Automated reminders based on elapsed mileage (e.g. every 5,000 km) or elapsed time (e.g. every 6 months) for oil changes, PMS, and tire rotation.
-- **Fuel Consumption & Mileage Tracking:** Log fuel fill-ups (liters, cost, trip meter) to track fuel efficiency (km/L) and total cost of ownership.
-- **Photo & Receipt Attachments:** Upload and attach invoices, parts receipts, or work orders to maintenance logs.
-- **PDF Report Generation:** One-click downloadable maintenance summary reports formatted for insurance, vehicle resale, or service history documentation.
-- **User Authentication:** Multi-tenant user login and registration to securely isolate personal garages.
-- **Production Deployment:** Host PostgreSQL database on Neon, deploy Express API on Render, and host the React client on GitHub Pages.
+### Upcoming roadmap & deployment checklist
+1. **Feature Polish & Cleanup:**
+   - Remove experimental fuel logging module to keep the application cleanly focused on vehicle maintenance history, intervals, and expenses.
+   - Run end-to-end user regression tests across desktop and mobile screen sizes.
+2. **Production Database & API Deployment:**
+   - Provision managed PostgreSQL instance on Neon.
+   - Run `schema.sql` and `migrate_v2.sql` to establish production tables.
+   - Deploy Express backend on Render with production environment variables (`DATABASE_URL`, `CORS_ORIGINS`).
+3. **Frontend Production Deployment:**
+   - Configure GitHub Actions workflow for automated Vite build and deployment to GitHub Pages.
+   - Point `VITE_API_BASE_URL` to production Render API and switch `VITE_USE_MOCK_API=false`.
 
 ---
 
