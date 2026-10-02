@@ -55,15 +55,12 @@ export default function MaintenanceHistory() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [sortOrder, setSortOrder] = useState('date-desc');
 
-  // Edit state
   const [editingEntry, setEditingEntry] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Mileage update
   const [showMileageUpdate, setShowMileageUpdate] = useState(false);
   const [newMileage, setNewMileage] = useState('');
   const [mileageSaving, setMileageSaving] = useState(false);
@@ -100,7 +97,6 @@ export default function MaintenanceHistory() {
 
   useEffect(() => { loadData(); }, [id]);
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
@@ -113,7 +109,6 @@ export default function MaintenanceHistory() {
     }
   }
 
-  // ── Edit ───────────────────────────────────────────────────────────────────
   function startEdit(entry) {
     setEditingEntry(entry.id);
     setEditForm({
@@ -203,7 +198,7 @@ export default function MaintenanceHistory() {
     ? [...entries].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date
     : 'N/A';
 
-  // Cost per km
+
   const firstEntry = entries.length > 0
     ? [...entries].sort((a, b) => new Date(a.date) - new Date(b.date))[0]
     : null;
@@ -212,12 +207,10 @@ export default function MaintenanceHistory() {
     : 0;
   const costPerKm = kmDriven > 0 ? (totalCost / kmDriven).toFixed(2) : null;
 
-  // Reminders
   const reminders = vehicle ? computeReminders(entries, vehicle.currentMileage) : [];
   const overdueReminders = reminders.filter(r => r.status === 'overdue');
   const dueSoonReminders = reminders.filter(r => r.status === 'due-soon');
 
-  // Job types for filter dropdown
   const presentJobTypes = [...new Set(entries.map(e => e.jobType))].sort();
 
   if (loading) {
@@ -243,7 +236,7 @@ export default function MaintenanceHistory() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {/* Header */}
+
       <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
         <div>
           <h1>Maintenance History</h1>
@@ -297,7 +290,7 @@ export default function MaintenanceHistory() {
         </div>
       </div>
 
-      {/* Reminders */}
+
       {(overdueReminders.length > 0 || dueSoonReminders.length > 0) && (
         <div style={{ marginBottom: '1.5rem' }}>
           {overdueReminders.map((r, i) => (
@@ -313,7 +306,7 @@ export default function MaintenanceHistory() {
         </div>
       )}
 
-      {/* Stats */}
+
       <div className="stat-grid" style={{ marginBottom: '2rem' }}>
         <div className="card stat-card">
           <p className="text-muted stat-label">Total Jobs</p>
@@ -335,7 +328,7 @@ export default function MaintenanceHistory() {
         )}
       </div>
 
-      {/* Filters & Sort */}
+
       <div className="filter-bar" style={{ marginBottom: '1.5rem' }}>
         <input
           type="text"
@@ -402,7 +395,7 @@ export default function MaintenanceHistory() {
         )}
       </div>
 
-      {/* Entry list */}
+
       <div className="list-group">
         {filtered.length === 0 ? (
           <div className="card empty-state">
@@ -413,7 +406,6 @@ export default function MaintenanceHistory() {
           filtered.map(e => (
             <div key={e.id} className="card">
               {editingEntry === e.id ? (
-                /* ── Inline edit form ── */
                 <form onSubmit={handleEditSubmit}>
                   <div className="grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
@@ -478,7 +470,6 @@ export default function MaintenanceHistory() {
                   </div>
                 </form>
               ) : (
-                /* ── Read view ── */
                 <div className="maintenance-card">
                   <div className="mc-job">
                     <strong style={{ display: 'block', color: 'var(--accent-color)' }}>{e.jobType}</strong>

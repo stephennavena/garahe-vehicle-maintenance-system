@@ -1,8 +1,5 @@
 // Data-access layer for Garahe - Vehicle Maintenance Log
-//
-// Every query is parameterised: values go in the array, never into the string.
-// This prevents SQL injection from any form field.
-// All queries are scoped by garage_id to ensure tenant isolation.
+// All queries are parameterised and scoped by garage_id for tenant isolation.
 
 // ── VEHICLES ──────────────────────────────────────────────────────────────────
 
@@ -86,7 +83,6 @@ export async function getEntryById(pool, id, garageId = 'demo') {
 }
 
 export async function createEntry(pool, { vehicle_id, job_type, date, mileage, cost, notes, next_due_km, shop_name }, garageId = 'demo') {
-  // Validate vehicle ownership
   const vCheck = await pool.query(
     'SELECT id FROM vehicles WHERE id = $1 AND garage_id = $2',
     [vehicle_id, garageId]
@@ -100,7 +96,7 @@ export async function createEntry(pool, { vehicle_id, job_type, date, mileage, c
     [vehicle_id, job_type, date, mileage, cost ?? 0, notes ?? '', next_due_km ?? null, shop_name ?? '']
   )
 
-  // If this entry's mileage is higher than the vehicle's recorded mileage, update it.
+  // Update vehicle mileage if this entry's mileage is higher
   await pool.query(
     `UPDATE vehicles SET current_mileage = $1
      WHERE id = $2 AND current_mileage < $1 AND garage_id = $3`,
@@ -111,7 +107,6 @@ export async function createEntry(pool, { vehicle_id, job_type, date, mileage, c
 }
 
 export async function updateEntry(pool, id, { vehicle_id, job_type, date, mileage, cost, notes, next_due_km, shop_name }, garageId = 'demo') {
-  // Check ownership
   const entryCheck = await pool.query(
     `SELECT me.id, me.vehicle_id FROM maintenance_entries me
      JOIN vehicles v ON me.vehicle_id = v.id
@@ -149,4 +144,3 @@ export async function deleteEntry(pool, id, garageId = 'demo') {
   )
   return result.rowCount > 0
 }
-

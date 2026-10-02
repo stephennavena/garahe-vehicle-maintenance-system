@@ -33,14 +33,14 @@ export default function Dashboard() {
     loadData();
   }, []);
 
-  // Summary stats across ALL vehicles
+  // Summary stats
   const totalSpent = allEntries.reduce((sum, e) => sum + (Number(e.cost) || 0), 0);
   const totalJobs = allEntries.length;
   const lastServiceAll = allEntries.length > 0
     ? [...allEntries].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date
     : null;
 
-  // Reminder counts across all vehicles (for dashboard badge on stat card)
+  // Reminder counts
   const vehicleEntriesMap = {};
   for (const e of allEntries) {
     if (!vehicleEntriesMap[e.vehicleId]) vehicleEntriesMap[e.vehicleId] = [];
@@ -65,7 +65,7 @@ export default function Dashboard() {
     <div>
       <h1>Dashboard</h1>
 
-      {/* Alerts row */}
+
       {(overdueCount > 0 || dueSoonCount > 0) && (
         <div className="alerts-row" style={{ marginBottom: '1.5rem' }}>
           {overdueCount > 0 && (
@@ -83,7 +83,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Summary stat cards */}
+
       <div className="stat-grid" style={{ marginBottom: '2.5rem' }}>
         <div className="card stat-card">
           <p className="text-muted stat-label">Total Vehicles</p>
@@ -105,7 +105,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Spending chart */}
+
       {allEntries.length > 0 && (
         <div style={{ marginBottom: '3rem' }}>
           <h2 style={{ marginBottom: '1rem' }}>Spending Over Time</h2>
@@ -113,7 +113,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Vehicle cards */}
+
       <h2 style={{ marginBottom: '1rem' }}>Your Vehicles</h2>
       <div className="grid-2" style={{ marginBottom: '3rem' }}>
         {vehicles.length === 0 ? (
@@ -189,7 +189,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Recent maintenance across all vehicles */}
+
       <h2 style={{ marginBottom: '1rem' }}>Recent Maintenance</h2>
       {recentEntries.length === 0 ? (
         <div className="card empty-state">

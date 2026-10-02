@@ -1,9 +1,3 @@
-// The simulated backend.
-//
-// Same function names, same return types, and the same shape of failure as
-// httpApi.js, so your components cannot tell the difference. Data lives in the
-// visitor's own browser and goes no further.
-
 import seed from './seed.json'
 
 function getStorageKey() {
@@ -36,7 +30,7 @@ function write(data) {
   return data;
 }
 
-// -- VEHICLES --
+// ── Vehicles ───────────────────────────────────────────────────────────────────
 
 export async function listVehicles() {
   await delay()
@@ -86,7 +80,7 @@ export async function deleteVehicle(id) {
   write(data)
 }
 
-// -- MAINTENANCE ENTRIES --
+// ── Maintenance entries ────────────────────────────────────────────────────────
 
 export async function listMaintenanceEntries(vehicleId) {
   await delay()
@@ -160,7 +154,6 @@ export async function getGarage(code) {
     return { id: cleanCode, name: registered[cleanCode], exists: true }
   }
 
-  // Check if any vehicles were saved under this code in localStorage
   const existingData = localStorage.getItem(`garahe:data:${cleanCode}`)
   if (existingData) {
     try {

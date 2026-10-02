@@ -1,16 +1,4 @@
-// The real backend.
-//
-// Same function names and same return shapes as mockApi.js, so components
-// cannot tell the difference. Data lives in your PostgreSQL database via the
-// Express API.
-//
-// The DB uses snake_case column names (vehicle_id, job_type, current_mileage).
-// This file normalises them to camelCase on the way out so the rest of the
-// frontend code works unchanged whether it is talking to mock or real.
-
 const envUrl = import.meta.env.VITE_API_BASE_URL;
-// If accessed from mobile/network (e.g. 192.168.x.x) and envUrl points to localhost,
-// substitute the computer's IP so mobile phones can reach the Express API on port 3000.
 const BASE_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (!envUrl || envUrl.includes('localhost'))
   ? `http://${window.location.hostname}:3000`
   : (envUrl || 'http://localhost:3000');
@@ -36,7 +24,6 @@ async function request(path, options = {}) {
     },
   })
 
-  // DELETE returns 204 No Content — no body to parse
   if (response.status === 204) return null
 
   const data = await response.json()
@@ -48,7 +35,6 @@ async function request(path, options = {}) {
   return data
 }
 
-// Convert a DB vehicle row (snake_case) to the shape the UI expects (camelCase)
 function normaliseVehicle(row) {
   return {
     id: row.id,
@@ -59,13 +45,12 @@ function normaliseVehicle(row) {
   }
 }
 
-// Convert a DB maintenance row (snake_case) to the shape the UI expects
 function normaliseEntry(row) {
   return {
     id: row.id,
     vehicleId: row.vehicle_id,
     jobType: row.job_type,
-    date: row.date ? row.date.slice(0, 10) : row.date, // keep YYYY-MM-DD only
+    date: row.date ? row.date.slice(0, 10) : row.date,
     mileage: row.mileage,
     cost: Number(row.cost),
     notes: row.notes,
@@ -74,7 +59,6 @@ function normaliseEntry(row) {
     created_at: row.created_at,
   }
 }
-
 
 // ── Vehicles ───────────────────────────────────────────────────────────────────
 
@@ -178,5 +162,3 @@ export async function createGarageRecord({ id, name }) {
     body: JSON.stringify({ id: cleanCode, name }),
   })
 }
-
-

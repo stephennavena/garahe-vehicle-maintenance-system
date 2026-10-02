@@ -1,16 +1,13 @@
-// Service interval definitions — how often (km and days) each job type is due.
-// Used to compute reminder badges on vehicle cards and the Dashboard.
-
 export const SERVICE_INTERVALS = {
   'Oil Change':          { km: 5000,  days: 180 },
   'PMS':                 { km: 5000,  days: 180 },
   'Brake Pads':          { km: 30000, days: null },
-  'Brake Fluid':         { km: null,  days: 730 },   // ~2 years
+  'Brake Fluid':         { km: null,  days: 730 },
   'Tire Change':         { km: 50000, days: null },
   'Tire Rotation':       { km: 10000, days: null },
   'Air Filter':          { km: 15000, days: null },
   'Cabin Filter':        { km: 20000, days: 365 },
-  'Battery Replacement': { km: null,  days: 1095 },  // ~3 years
+  'Battery Replacement': { km: null,  days: 1095 },
   'Spark Plugs':         { km: 20000, days: null },
   'Coolant Flush':       { km: 50000, days: 730 },
   'Transmission Service':{ km: 40000, days: null },
@@ -21,18 +18,11 @@ export const SERVICE_INTERVALS = {
   'General Inspection':  { km: 10000, days: 180 },
 }
 
-/**
- * Given all maintenance entries for a vehicle and its current mileage,
- * return an array of overdue/due-soon reminder objects.
- *
- * Each reminder: { jobType, status: 'overdue'|'due-soon', detail }
- */
 export function computeReminders(entries, currentMileage) {
   const reminders = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Group entries by jobType and find the most recent one per type
   const latestByType = {}
   for (const e of entries) {
     if (!latestByType[e.jobType] || new Date(e.date) > new Date(latestByType[e.jobType].date)) {
@@ -42,7 +32,7 @@ export function computeReminders(entries, currentMileage) {
 
   for (const [jobType, interval] of Object.entries(SERVICE_INTERVALS)) {
     const last = latestByType[jobType]
-    if (!last) continue // No history — can't compute without a baseline
+    if (!last) continue
 
     const lastDate = new Date(last.date)
     lastDate.setHours(0, 0, 0, 0)
@@ -51,9 +41,7 @@ export function computeReminders(entries, currentMileage) {
     let status = null
     let detail = null
 
-    // 1. Mileage check:
-    // If the user specified an explicit nextDueKm on their last service, that custom target
-    // completely replaces the generic vehicle interval.km!
+    // Mileage check: if user set an explicit nextDueKm, use that as the target
     if (last.nextDueKm != null && !isNaN(Number(last.nextDueKm))) {
       const targetKm = Number(last.nextDueKm)
       const kmLeft = targetKm - currentMileage
@@ -67,9 +55,7 @@ export function computeReminders(entries, currentMileage) {
         status = 'due-soon'
         detail = `${jobType} due in ~${kmLeft.toLocaleString()} km (at ${targetKm.toLocaleString()} km)`
       }
-      // If kmLeft > 500, it is NOT due yet by mileage!
     } else if (interval.km != null) {
-      // Default periodic km interval (e.g. every 5,000 km)
       const kmSince = currentMileage - last.mileage
       const kmLeft = interval.km - kmSince
       if (kmLeft < 0) {
@@ -84,7 +70,7 @@ export function computeReminders(entries, currentMileage) {
       }
     }
 
-    // 2. Day/time interval check (only upgrades severity, doesn't downgrade)
+    // Day/time interval check — only upgrades severity, never downgrades
     if (interval.days != null) {
       const daysLeft = interval.days - daysSince
       if (daysLeft < 0 && status !== 'overdue') {

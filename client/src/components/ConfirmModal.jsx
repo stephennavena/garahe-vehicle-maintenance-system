@@ -1,10 +1,6 @@
-// Reusable confirmation modal — replaces browser's window.confirm().
-// Closes on backdrop click or Escape key press.
-
 import { useEffect } from 'react';
 
 export default function ConfirmModal({ isOpen, title = 'Are you sure?', message, confirmLabel = 'Delete', onConfirm, onCancel }) {
-  // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
     function handleKey(e) {

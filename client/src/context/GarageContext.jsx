@@ -24,7 +24,6 @@ export function getActiveGarageId() {
 
 export function GarageProvider({ children }) {
   const [garage, setGarageState] = useState(() => {
-    // 1. Check if URL has ?garage=CODE
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlCode = params.get('garage') || params.get('code');
@@ -38,7 +37,7 @@ export function GarageProvider({ children }) {
       }
     }
 
-    // 2. Check localStorage
+    // Check localStorage
     const savedId = localStorage.getItem(STORAGE_KEY_ID);
     const savedName = localStorage.getItem(STORAGE_KEY_NAME);
     if (savedId) {
@@ -48,7 +47,7 @@ export function GarageProvider({ children }) {
       };
     }
 
-    // Default to 'demo'
+    // Default to demo
     return { id: 'demo', name: 'Demo Showcase' };
   });
 
@@ -64,7 +63,6 @@ export function GarageProvider({ children }) {
     const cleanId = (id || 'demo').trim().toLowerCase().slice(0, 64);
     const cleanName = name && name.trim() ? name.trim() : (cleanId === 'demo' ? 'Demo Showcase' : `Garage ${cleanId.toUpperCase()}`);
     setGarageState({ id: cleanId, name: cleanName });
-    // Trigger custom event so any listeners re-fetch immediately
     window.dispatchEvent(new CustomEvent('garahe:garage_changed', { detail: { id: cleanId, name: cleanName } }));
   }
 

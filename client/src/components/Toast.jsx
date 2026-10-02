@@ -1,10 +1,4 @@
-// Toast notification component — shown on success/error after form actions.
-// Usage: import { useToast, ToastContainer } from './Toast';
-//   const { toasts, showToast } = useToast();
-//   showToast('Saved!', 'success');
-//   <ToastContainer toasts={toasts} />
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 export function useToast() {
   const [toasts, setToasts] = useState([]);

@@ -1,9 +1,5 @@
 import { useMemo, useState } from 'react';
 
-/**
- * SpendingChart — renders a full-width, responsive monthly bar chart of maintenance spending
- * with an optional breakdown table toggle so users can inspect exact figures and trends clearly.
- */
 export default function SpendingChart({ entries = [] }) {
   const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'table'
 
@@ -12,7 +8,6 @@ export default function SpendingChart({ entries = [] }) {
       return { chartData: [], totalSpend: 0, avgMonthly: 0, maxMonth: null };
     }
 
-    // Map month -> { total, count }
     const map = {};
     let total = 0;
 
@@ -31,7 +26,7 @@ export default function SpendingChart({ entries = [] }) {
     const allMonths = Object.keys(map).sort();
     const earliestMonth = allMonths[0] || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
-    // Check how many months back to go (min 6, max 12)
+    // Min 6, max 12 months back
     const [eYear, eMonth] = earliestMonth.split('-').map(Number);
     const monthsDiff = (now.getFullYear() - eYear) * 12 + (now.getMonth() + 1 - eMonth);
     const countBack = Math.max(5, Math.min(11, isNaN(monthsDiff) ? 5 : monthsDiff));
@@ -70,7 +65,7 @@ export default function SpendingChart({ entries = [] }) {
 
   if (chartData.length === 0) return null;
 
-  // Visual layout constants for SVG (ViewBox coordinate space)
+  // SVG layout constants (ViewBox coordinate space)
   const V_WIDTH = 760;
   const V_HEIGHT = 220;
   const PAD_LEFT = 75;
@@ -94,7 +89,6 @@ export default function SpendingChart({ entries = [] }) {
 
   return (
     <div className="card spending-chart-card">
-      {/* Header bar with summary & view switcher */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
           <div>
@@ -117,7 +111,6 @@ export default function SpendingChart({ entries = [] }) {
           )}
         </div>
 
-        {/* View Toggle */}
         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '3px', border: '1px solid var(--card-border)' }}>
           <button
             type="button"
@@ -163,7 +156,6 @@ export default function SpendingChart({ entries = [] }) {
               </linearGradient>
             </defs>
 
-            {/* Y-axis gridlines and numeric ticks */}
             {ticks.map((tick, i) => {
               const y = PAD_TOP + usableH - (tick / maxVal) * usableH;
               return (
@@ -191,7 +183,6 @@ export default function SpendingChart({ entries = [] }) {
               );
             })}
 
-            {/* Bars and Month Labels */}
             {chartData.map((d, i) => {
               const centerX = PAD_LEFT + i * slotW + slotW / 2;
               const barX = centerX - barW / 2;
@@ -200,7 +191,6 @@ export default function SpendingChart({ entries = [] }) {
 
               return (
                 <g key={d.month} className="chart-bar-group">
-                  {/* Subtle hover area */}
                   <rect
                     x={PAD_LEFT + i * slotW + 2}
                     y={PAD_TOP}
@@ -211,7 +201,6 @@ export default function SpendingChart({ entries = [] }) {
                     <title>{`${d.fullLabel}: ₱${d.total.toLocaleString()} (${d.count} job${d.count !== 1 ? 's' : ''})`}</title>
                   </rect>
 
-                  {/* Active bar or ₱0 indicator */}
                   {d.total > 0 ? (
                     <>
                       <rect
@@ -224,7 +213,6 @@ export default function SpendingChart({ entries = [] }) {
                       >
                         <title>{`${d.fullLabel}: ₱${d.total.toLocaleString()} (${d.count} job${d.count !== 1 ? 's' : ''})`}</title>
                       </rect>
-                      {/* Cost value on top of bar */}
                       <text
                         x={centerX}
                         y={Math.max(barY - 7, PAD_TOP - 6)}
@@ -238,7 +226,6 @@ export default function SpendingChart({ entries = [] }) {
                       </text>
                     </>
                   ) : (
-                    /* Faint dash at baseline for zero-spend months */
                     <line
                       x1={centerX - 8}
                       y1={PAD_TOP + usableH}
@@ -251,7 +238,6 @@ export default function SpendingChart({ entries = [] }) {
                     </line>
                   )}
 
-                  {/* Month X-axis label */}
                   <text
                     x={centerX}
                     y={V_HEIGHT - 12}
@@ -269,7 +255,6 @@ export default function SpendingChart({ entries = [] }) {
           </svg>
         </div>
       ) : (
-        /* Breakdown Table View */
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
             <thead>

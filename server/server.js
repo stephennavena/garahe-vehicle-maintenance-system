@@ -6,8 +6,6 @@ import * as repo from './maintenanceRepo.js'
 
 const app = express()
 
-// CORS before the routes. Middleware registered after a route never sees that
-// route's requests.
 const rawOrigins = process.env.CORS_ORIGINS || 'http://localhost:5173'
 const allowedOrigins = rawOrigins
   .split(',')
@@ -21,10 +19,9 @@ app.use(cors({
   origin: corsOrigin,
   allowedHeaders: ['Content-Type', 'X-Garage-Id'],
 }))
-app.use(express.json({ limit: '2mb' })) // allow larger payloads for photo URLs
+app.use(express.json({ limit: '2mb' }))
 
-// ── Garage Isolation Middleware ───────────────────────────────────────────────
-// Extracts the active garage code from the X-Garage-Id header (defaults to 'demo').
+// Extract the active garage code from X-Garage-Id header (defaults to 'demo')
 app.use((request, response, next) => {
   const raw = request.headers['x-garage-id']
   const garageId = typeof raw === 'string' && raw.trim()
@@ -93,7 +90,8 @@ function validateEntry(body) {
   return { errors, value: { vehicle_id, job_type, date, mileage, cost, notes, next_due_km, shop_name } }
 }
 
-// ── Auto-ensure garages table exists ──────────────────────────────────────────
+// ── Garages table init ────────────────────────────────────────────────────────
+
 async function initGaragesTable() {
   try {
     await pool.query(`
@@ -271,7 +269,6 @@ app.delete('/api/maintenance/:id', async (request, response, next) => {
     next(error)
   }
 })
-
 
 // ── Catch-all & error handler ─────────────────────────────────────────────────
 

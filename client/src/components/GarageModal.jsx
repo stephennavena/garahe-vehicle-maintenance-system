@@ -5,7 +5,7 @@ import { getGarage, createGarageRecord } from '../api';
 
 export default function GarageModal() {
   const { garage, isDemo, switchGarage, createGarage, switchToDemo, getShareLink, modalOpen, closeModal } = useGarage();
-  const [tab, setTab] = useState('current'); // 'current' | 'create' | 'join'
+  const [tab, setTab] = useState('current');
   const [newName, setNewName] = useState('');
   const [newCode, setNewCode] = useState(() => generateGarageCode());
   const [joinCode, setJoinCode] = useState('');
@@ -63,7 +63,7 @@ export default function GarageModal() {
       switchGarage(code, result.name);
       showToast(`Logged into ${result.name}!`, 'success');
       closeModal();
-    } catch (err) {
+    } catch {
       setError(`❌ No garage found with code "${code.toUpperCase()}". Please check your code or click "+ New Account" to create one.`);
     } finally {
       setVerifying(false);
@@ -93,7 +93,6 @@ export default function GarageModal() {
           <button type="button" className="btn-close" onClick={closeModal} aria-label="Close">✕</button>
         </div>
 
-        {/* Account Explainer Callout */}
         <div className="account-explainer-box">
           <div className="account-explainer-header">
             <span>🔑</span>
@@ -105,7 +104,6 @@ export default function GarageModal() {
           </p>
         </div>
 
-        {/* Tab Navigation */}
         <div className="garage-tabs">
           <button
             type="button"

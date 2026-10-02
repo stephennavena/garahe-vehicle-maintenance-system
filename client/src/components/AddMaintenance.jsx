@@ -54,7 +54,6 @@ export default function AddMaintenance() {
         setVehicle(v);
         setMileage(String(v.currentMileage));
 
-        // Feature 10: Copy Last Entry — pre-fill from most recent record
         if (existingEntries.length > 0) {
           const last = existingEntries[0]; // already sorted newest first
           setLines([{
@@ -125,7 +124,7 @@ export default function AddMaintenance() {
     setSaving(true);
     try {
       // Create one entry per line item (same date + mileage, different job/cost)
-      // Only the last line item gets the nextDueKm (since they share the same visit)
+      // Only the last line item gets nextDueKm since they share the same visit
       await Promise.all(lines.map((line, i) => {
         const resolvedJobType = line.jobType === 'Other' ? line.customJobType.trim() : line.jobType;
         return createMaintenanceEntry({
@@ -171,9 +170,9 @@ export default function AddMaintenance() {
         </p>
 
         <form onSubmit={handleSubmit} noValidate>
-          {/* ── Visit-level fields ── */}
+
           <div className="grid-2">
-            {/* Date */}
+
             <div className="form-group">
               <label className="form-label">Service Date</label>
               <input
@@ -187,7 +186,7 @@ export default function AddMaintenance() {
               {errors.date && <p className="form-error">{errors.date}</p>}
             </div>
 
-            {/* Mileage at service */}
+
             <div className="form-group">
               <label className="form-label">Mileage at Service (km)</label>
               <input
@@ -205,7 +204,7 @@ export default function AddMaintenance() {
             </div>
           </div>
 
-          {/* Next due mileage */}
+
           <div className="form-group">
             <label className="form-label">Next Service Due at (km) <span className="text-muted">(optional)</span></label>
             <input
@@ -220,7 +219,7 @@ export default function AddMaintenance() {
             <p className="form-hint">Set this to get a reminder when the vehicle approaches this mileage.</p>
           </div>
 
-          {/* ── Per-job line items ── */}
+
           <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
             <div className="flex-between" style={{ marginBottom: '1rem' }}>
               <label className="form-label" style={{ marginBottom: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
@@ -310,7 +309,7 @@ export default function AddMaintenance() {
               </div>
             ))}
 
-            {/* Summary */}
+
             {lines.length > 1 && (
               <div className="cost-summary">
                 <span className="text-muted">Total for this visit:</span>

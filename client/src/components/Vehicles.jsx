@@ -24,7 +24,7 @@ export default function Vehicles() {
   const [editMileage, setEditMileage] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
 
-  // Delete confirm modal
+
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { toasts, showToast } = useToast();
@@ -78,7 +78,7 @@ export default function Vehicles() {
 
   useEffect(() => { loadData(); }, []);
 
-  // ── Photo handling (base64 for mock mode; URL for real mode) ────────────────
+
   function handlePhotoFile(file, setter) {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { showToast('Photo must be under 2 MB.', 'error'); return; }
@@ -295,7 +295,7 @@ export default function Vehicles() {
                         min="0"
                       />
                     </div>
-                    {/* Photo edit */}
+
                     <div className="form-group">
                       <label className="form-label">Vehicle Photo</label>
                       {editPhotoUrl && (
@@ -334,14 +334,14 @@ export default function Vehicles() {
                   </form>
                 ) : (
                   <>
-                    {/* Photo */}
+
                     {v.photoUrl && (
                       <div className="vehicle-photo-preview" style={{ marginBottom: '1rem' }}>
                         <img src={v.photoUrl} alt={v.model} />
                       </div>
                     )}
 
-                    {/* Header + reminder badge */}
+
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       <h2 style={{ marginBottom: 0 }}>{v.model}</h2>
                       {overdue.length > 0 && (
