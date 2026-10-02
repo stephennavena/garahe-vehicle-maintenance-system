@@ -122,16 +122,14 @@ export default function GarageModal() {
                   </div>
                   <h4 style={{ fontSize: '1.15rem', color: '#f8fafc', marginBottom: '0.5rem' }}>{garage.name}</h4>
                   
-                  <div className="garage-code-row">
-                    <div>
-                      <span className="text-secondary text-xs" style={{ display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Your Account Code
-                      </span>
+                  <div className="garage-code-box">
+                    <span className="garage-code-label">Your Account Code</span>
+                    <div className="garage-code-row">
                       <span className="garage-code-display">{garage.id.toUpperCase()}</span>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={handleCopyCode}>
+                        📋 Copy Code
+                      </button>
                     </div>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={handleCopyCode}>
-                      📋 Copy Code
-                    </button>
                   </div>
                 </div>
               </div>
@@ -160,44 +158,67 @@ export default function GarageModal() {
           )}
 
           {tab === 'create' && (
-            <form onSubmit={handleCreate} className="garage-form">
-              <div style={{ marginBottom: '1rem' }}>
-                <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc', fontSize: '1rem' }}>Create a New Private Garage</h4>
-                <p className="text-secondary text-sm" style={{ margin: 0 }}>
+            <form onSubmit={handleCreate} className="garage-form" style={{ marginTop: '0.5rem' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.35rem 0', color: '#f8fafc', fontSize: '1.05rem' }}>Create a New Private Garage</h4>
+                <p className="text-secondary text-sm" style={{ margin: 0, lineHeight: '1.4' }}>
                   Start fresh with your own personal cloud account for your vehicles.
                 </p>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="garage-new-name">Garage / Account Name</label>
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" htmlFor="garage-new-name">
+                  Garage / Account Name
+                </label>
                 <input
                   id="garage-new-name"
+                  className="form-control"
                   type="text"
                   placeholder="e.g. Stephenn's Garage, Family Fleet"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   maxLength={60}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    fontSize: '1rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    background: 'rgba(15, 23, 42, 0.7)',
+                  }}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="garage-new-code">
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" htmlFor="garage-new-code">
                   Generated Account Code <span className="text-secondary">(your login key)</span>
                 </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
                   <input
                     id="garage-new-code"
+                    className="form-control"
                     type="text"
                     value={newCode}
                     onChange={e => setNewCode(e.target.value.toUpperCase())}
                     maxLength={24}
-                    style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
+                    style={{
+                      textTransform: 'uppercase',
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      fontSize: '1.05rem',
+                      letterSpacing: '0.05em',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      background: 'rgba(15, 23, 42, 0.7)',
+                      color: '#38bdf8',
+                    }}
                   />
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setNewCode(generateGarageCode())}
                     title="Generate new random code"
+                    style={{ padding: '0.5rem 0.85rem', flexShrink: 0 }}
                   >
                     🎲 Refresh
                   </button>
@@ -205,7 +226,7 @@ export default function GarageModal() {
                 <small className="form-help">Save this code. You will use it to access your garage from any device.</small>
               </div>
 
-              <div className="modal-actions" style={{ marginTop: '1.25rem' }}>
+              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setTab('current')}>
                   Cancel
                 </button>
@@ -217,30 +238,44 @@ export default function GarageModal() {
           )}
 
           {tab === 'join' && (
-            <form onSubmit={handleJoin} className="garage-form">
-              <div style={{ marginBottom: '1rem' }}>
-                <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc', fontSize: '1rem' }}>Log In to Existing Garage</h4>
-                <p className="text-secondary text-sm" style={{ margin: 0 }}>
+            <form onSubmit={handleJoin} className="garage-form" style={{ marginTop: '0.5rem' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.35rem 0', color: '#f8fafc', fontSize: '1.05rem' }}>Log In to Existing Garage</h4>
+                <p className="text-secondary text-sm" style={{ margin: 0, lineHeight: '1.4' }}>
                   Enter your Garage Code from another browser or device to load your records.
                 </p>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="garage-join-code">Enter Your Garage Code</label>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" htmlFor="garage-join-code">
+                  Enter Your Garage Code
+                </label>
                 <input
                   id="garage-join-code"
+                  className="form-control"
                   type="text"
                   placeholder="e.g. GRH-8821"
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   maxLength={24}
-                  style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.05em' }}
+                  style={{
+                    textTransform: 'uppercase',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    letterSpacing: '0.06em',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    color: '#38bdf8',
+                  }}
                   autoFocus
                 />
                 <small className="form-help">Type or paste the code you saved from your other device.</small>
               </div>
 
-              <div className="modal-actions" style={{ marginTop: '1.25rem' }}>
+              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setTab('current')}>
                   Cancel
                 </button>
