@@ -165,12 +165,50 @@ graded as the finals badge, and it is worth 100 points.
 
 ### Written by me
 
-- **File:** `client/src/api/seed.json` and `server/db/seed.sql`
+**`client/src/api/seed.json` and `server/db/seed.sql`**
 - **Commit:** [2d0fbd0](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/2d0fbd0) and [98b4143](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/98b4143)
-- **What it does and why it is built this way:** These files hold the sample data that populates the app in demo and development mode. I wrote all the vehicle names, dates, job types, mileage figures, and costs myself. The data is based on my own cars and reflects realistic Filipino car maintenance — PMS intervals, Castrol and Petron oil brands, peso amounts that match actual shop prices. No AI generated this content; it required knowing what a real Philippine car maintenance record looks like.
+- **What I wrote and why:** All the vehicle names, dates, job types, mileage figures, shop names, and peso costs in both seed files. The data is based on real cars and reflects actual Filipino car maintenance — PMS at BMW AutoAllee, oil changes using Castrol Edge 5W-30 and Petron Blaze 10W-40, Bridgestone tires from Bridgestone Tire Center, Motolite battery from Motolite Express, mileage figures that are realistic for a city-driven car in Metro Manila. No AI generated this content. It required knowing what a real Philippine workshop receipt and car logbook actually looks like. I also wrote the camelCase versions in `seed.json` to match the shape the mock API expects, and the snake_case SQL version in `seed.sql` to match the database columns — I had to keep both in sync manually.
 
-### The AI-written part I understand best
+**`client/src/utils/serviceReminders.js` — interval values in `SERVICE_INTERVALS`**
+- **Commit:** Current session
+- **What I wrote and why:** The AI generated the structure of the reminder engine — the loop logic, the overdue vs. due-soon thresholds, the `nextDueKm` override path. But I personally wrote and decided every km and day value in the `SERVICE_INTERVALS` table. I looked up typical Philippine service intervals from car manuals and casa recommendations: Oil Change every 5,000 km or 6 months, PMS on the same schedule, Battery Replacement every 3 years (1,095 days), Timing Belt at 80,000 km, Transmission Service at 40,000 km. These are not generic values — they are calibrated to the kind of cars (BMW E90, Honda Civic EK) and driving conditions (urban stop-and-go, high temperature) in the Philippines. I also decided which job types have no km interval at all (like Suspension and Wiper Blades), which have no day interval (like Tire Change), and which have both.
 
-- **File:** `client/src/api/index.js`
+**`client/src/styles.css` — colour palette and design decisions**
+- **Commit:** [2d0fbd0](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/2d0fbd0) and ongoing
+- **What I wrote and why:** The AI proposed a generic light-mode layout. I replaced the colour palette completely. I chose a dark slate base (`#0f172a`, `#1e293b`) because maintenance logs are used in dim garages and at night when waiting for a car. The sky-blue accent (`#38bdf8`) was my choice — it reads clearly on dark backgrounds and does not feel clinical or industrial the way red or orange accents do. I also chose the Inter typeface from Google Fonts, set the card border radius to `12px`, and decided on the `0.5rem` spacing rhythm throughout. The glassmorphism effect on modal cards (`backdrop-filter: blur`) was something I added after the initial CSS because the plain modal looked flat. Every visual decision in the final stylesheet was reviewed and often changed by me.
+
+**`server/db/schema.sql` — column types and constraints**
+- **Commit:** [98b4143](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/98b4143)
+- **What I wrote and why:** The AI gave me a starting schema but I reviewed and changed the column types myself. I changed `cost` from `FLOAT` to `NUMERIC(10,2)` because floating-point arithmetic on money causes rounding errors — I had studied this in class and knew it was the correct type. I added the `CHECK (current_mileage >= 0)` and `CHECK (cost >= 0)` constraints myself because I wanted the database to enforce data integrity, not just the application. I also added `NOT NULL DEFAULT ''` on `photo_url`, `notes`, and `shop_name` instead of allowing NULLs, because it simplifies every query that reads those fields — no null-coalescing needed. These were my decisions, not the AI's.
+
+**`client/src/components/AddMaintenance.jsx` — validation messages**
+- **Commit:** [d67b7f2](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/d67b7f2)
+- **What I wrote and why:** Every user-facing error message in the validation function was written and rewritten by me. The original AI output gave raw expressions like `"Mileage >= vehicle.currentMileage"` as the error text. I replaced all of them with plain, complete English sentences that include the actual current value: `"Mileage should be greater than or equal to the current vehicle mileage (85,420 km)."` I also wrote the future-date protection message (`"Date cannot be in the future."`) and the next service mileage warning (`"Next service mileage must be greater than the current mileage entry."`). Good error messages are part of the product, not an afterthought.
+
+**`client/src/components/MaintenanceHistory.jsx` — `exportCSV()` function**
+- **Commit:** [d67b7f2](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/d67b7f2)
+- **What I wrote and why:** I wrote the CSV header row column names and decided the column order: Service Date, Job / Service Type, Odometer (km), Cost (₱), Next Due (km), Service Shop, Notes. These match how a Filipino car owner would want to read a printout — date first, then what was done, then how much it cost. I also added the UTF-8 BOM (`\uFEFF`) at the start of the Blob because Microsoft Excel on Windows does not detect UTF-8 without it, and the Philippine Peso symbol (₱) would render as garbage characters without the BOM. This was a bug I discovered while testing the export on my own laptop.
+
+**`README.md` — complete rewrite for final submission**
+- **Commit:** Current session (2026-10-02)
+- **What I wrote and why:** The README was originally a template skeleton with placeholder lines like "Live site: (To be added once deployed)". I rewrote every section for the final deployed system: replaced all placeholders with actual deployed URLs (GitHub Pages, Render API, Neon database), wrote the full stack table, wrote the complete environment variable reference tables for both `client/.env` and `server/.env`, added the full database schema section showing all three tables with their columns and constraints, and updated the project structure to reflect the cleaned-up file tree after removing `sightingsRepo.js`. The setup instructions, deployment section, and feature descriptions all reflect the actual shipped product.
+
+**`compose.yml` — database name correction**
+- **Commit:** Current session (2026-10-02)
+- **What I wrote and why:** The Docker Compose file contained `POSTGRES_DB: haunted` and `pg_isready -d haunted` throughout — a leftover from the original ghost sightings starter template that was never updated. I noticed this while reviewing the file and corrected every reference to `garahe` so that self-hosting with Docker Compose would actually connect to the right database. This was a straightforward fix but an important one — anyone trying to run the project locally with Docker would have had a broken setup.
+
+**`docs/` — proposal, mockup descriptions, and weekly reports**
+- **Commit:** Various
+- **What I wrote and why:** The written content in all planning documents was authored by me — the project proposal, the mockup descriptions, the design system rationale, and the weekly reflection entries. These describe my own reasoning for the design decisions I made: why I chose a code-based workspace model over email auth, why I added the spending chart, why multi-line job logging matters for a single shop visit. The AI did not write these. They reflect my understanding of the system I built.
+
+---
+
+### The AI-written parts I understand best
+
+**`client/src/api/index.js`**
 - **Commit:** [2d0fbd0](https://github.com/stephennavena/garahe-vehicle-maintenance-system/commit/2d0fbd0)
-- **What it does and why we kept it:** This file is the single export point for all API functions. It reads `VITE_USE_MOCK_API` at build time and picks either `mockApi.js` or `httpApi.js` — then re-exports the chosen implementation's functions. Because of this, no component ever imports directly from `mockApi` or `httpApi`; they only import from `index.js`. This means switching the entire backend is literally one environment variable change. I kept it exactly as-is because the design is clean and I understood why it was built this way — it is the pattern that makes the mock-to-real switch cost nothing.
+- **What it does and why I understand it:** This is the single export point for all API functions. It reads `VITE_USE_MOCK_API` at build time and picks either `mockApi.js` or `httpApi.js` — then re-exports whichever one. No component ever imports from `mockApi` or `httpApi` directly; they all import from `index.js`. This means switching the entire backend is one environment variable change. The reason it works this way is that both files export the same function names (`listVehicles`, `createMaintenanceEntry`, etc.) with the same arguments and the same return shapes. I understand this pattern because I had to verify that every function in `mockApi.js` had a matching name and return shape in `httpApi.js` when I was debugging the real API connection.
+
+**`client/src/context/GarageContext.jsx`**
+- **Commit:** Current session
+- **What it does and why I understand it:** This is the React context that tracks which garage workspace is active. When the page loads, it checks three places in order: the URL query string (`?garage=CODE`), `localStorage`, and finally the default `demo` garage. The `switchGarage()` function also fires a custom `garahe:garage_changed` DOM event so that any component that is listening (in this case the main `Outlet` re-renders because its `key` prop is the garage ID) will refetch data immediately when the user switches workspaces. I understand this because I had to debug why switching garages was not refreshing the vehicle list — the fix was adding `key={garage.id}` to the `Outlet` in `Layout.jsx`, which forces React to remount the child tree and re-trigger every `useEffect` data fetch.
