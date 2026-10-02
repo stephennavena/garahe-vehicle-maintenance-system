@@ -8,15 +8,30 @@
 // This file normalises them to camelCase on the way out so the rest of the
 // frontend code works unchanged whether it is talking to mock or real.
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const envUrl = import.meta.env.VITE_API_BASE_URL;
+// If accessed from mobile/network (e.g. 192.168.x.x) and envUrl points to localhost,
+// substitute the computer's IP so mobile phones can reach the Express API on port 3000.
+const BASE_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (!envUrl || envUrl.includes('localhost'))
+  ? `http://${window.location.hostname}:3000`
+  : (envUrl || 'http://localhost:3000');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+function getGarageId() {
+  try {
+    return localStorage.getItem('garahe:garage_id') || 'demo';
+  } catch {
+    return 'demo';
+  }
+}
+
 async function request(path, options = {}) {
+  const garageId = getGarageId();
   const response = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'X-Garage-Id': garageId,
       ...options.headers,
     },
   })
@@ -60,20 +75,6 @@ function normaliseEntry(row) {
   }
 }
 
-// Convert a DB fuel log row (snake_case) to the shape the UI expects
-function normaliseFuelLog(row) {
-  return {
-    id: row.id,
-    vehicleId: row.vehicle_id,
-    date: row.date ? row.date.slice(0, 10) : row.date,
-    mileage: row.mileage,
-    liters: Number(row.liters),
-    pricePerLiter: Number(row.price_per_liter),
-    totalCost: Number(row.total_cost),
-    notes: row.notes || '',
-    created_at: row.created_at,
-  }
-}
 
 // ── Vehicles ───────────────────────────────────────────────────────────────────
 
@@ -163,44 +164,3 @@ export async function deleteMaintenanceEntry(id) {
   await request(`/api/maintenance/${id}`, { method: 'DELETE' })
 }
 
-// ── Fuel logs ─────────────────────────────────────────────────────────────────
-
-export async function listFuelLogs(vehicleId) {
-  const path = vehicleId ? `/api/fuel?vehicleId=${vehicleId}` : '/api/fuel'
-  const rows = await request(path)
-  return rows.map(normaliseFuelLog)
-}
-
-export async function createFuelLog(input) {
-  const row = await request('/api/fuel', {
-    method: 'POST',
-    body: JSON.stringify({
-      vehicle_id: input.vehicleId ?? input.vehicle_id,
-      date: input.date,
-      mileage: input.mileage,
-      liters: input.liters,
-      price_per_liter: input.pricePerLiter ?? input.price_per_liter,
-      notes: input.notes ?? '',
-    }),
-  })
-  return normaliseFuelLog(row)
-}
-
-export async function updateFuelLog(id, input) {
-  const row = await request(`/api/fuel/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      vehicle_id: input.vehicleId ?? input.vehicle_id,
-      date: input.date,
-      mileage: input.mileage,
-      liters: input.liters,
-      price_per_liter: input.pricePerLiter ?? input.price_per_liter,
-      notes: input.notes ?? '',
-    }),
-  })
-  return normaliseFuelLog(row)
-}
-
-export async function deleteFuelLog(id) {
-  await request(`/api/fuel/${id}`, { method: 'DELETE' })
-}

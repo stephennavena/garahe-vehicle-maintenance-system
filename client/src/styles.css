@@ -121,11 +121,41 @@ body {
 
 .btn-primary {
   background-color: var(--accent-color);
-  color: #fff;
+  color: #fff !important;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--accent-hover);
+  color: #fff !important;
+}
+
+.btn-secondary {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff !important;
+}
+
+.btn-secondary:visited {
+  color: var(--text-primary) !important;
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+a.btn:visited {
+  color: inherit;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.825rem;
 }
 
 .btn-danger {
@@ -148,6 +178,28 @@ body {
 .btn-outline:hover:not(:disabled) {
   border-color: var(--accent-color);
   color: var(--accent-color);
+}
+
+/* Recent maintenance card hover & arrow */
+.recent-entry-card {
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.recent-entry-card:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.recent-entry-card:hover .recent-entry-arrow {
+  transform: translateX(4px);
+  color: var(--accent-color);
+}
+
+.recent-entry-arrow {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease, color 0.2s ease;
+  margin-left: 0.75rem;
 }
 
 /* Typography */
@@ -419,8 +471,7 @@ h2 {
 }
 
 /* Maintenance list card */
-.maintenance-card,
-.fuel-log-card {
+.maintenance-card {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr auto;
   gap: 1rem;
@@ -714,8 +765,7 @@ select.form-control {
     gap: 1rem;
   }
 
-  .maintenance-card,
-  .fuel-log-card {
+  .maintenance-card {
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
@@ -794,4 +844,155 @@ select.form-control {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
+}
+
+/* ── Garage Workspace Badge & Modal ────────────────────────────────────────── */
+
+.garage-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.garage-badge-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: translateY(-1px);
+}
+
+.garage-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.garage-badge-label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.garage-badge-code {
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--primary-light, #38bdf8);
+}
+
+.garage-modal {
+  max-width: 480px;
+  width: 100%;
+}
+
+.garage-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.garage-icon-lg {
+  font-size: 1.8rem;
+}
+
+.garage-tabs {
+  display: flex;
+  gap: 0.35rem;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 0.3rem;
+  border-radius: 10px;
+  margin-top: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.garage-tab-btn {
+  flex: 1;
+  text-align: center;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.garage-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.garage-tab-btn.active {
+  background: var(--primary, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+.garage-modal-body {
+  padding-top: 0.75rem;
+}
+
+.garage-active-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.garage-pill {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  margin-bottom: 0.5rem;
+}
+
+.garage-code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+}
+
+.garage-code-display {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.garage-sync-box {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.btn-xs {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
 }

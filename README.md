@@ -115,6 +115,12 @@ You should see your vehicles listed and be able to add new maintenance entries. 
 
 ## Features and usage
 
+### Private Garage Workspaces (Lightweight Multi-Tenancy)
+- **Zero-Friction Private Workspaces:** Users can create an isolated garage workspace with a unique Garage Code (e.g. `GRH-8821`) without needing to register personal emails or manage passwords.
+- **Cross-Device Cloud Sync:** Sync your garage seamlessly across mobile and desktop by typing your garage code or sharing a direct sync link (`?garage=CODE`).
+- **Complete Tenant Isolation:** PostgreSQL queries filter strictly by `garage_id` in parameterised queries, ensuring that each user only views and modifies their own cars and service history.
+- **Instant Demo Showcase:** Graders and visitors can toggle to the pre-seeded `Demo Showcase` garage in 1 click, allowing immediate testing of sample records.
+
 ### Interactive Dashboard & Spending Analytics
 - **Metric Summary Cards:** Quick stats displaying Total Vehicles, Total Service Jobs logged, Total Maintenance Expenditure (₱), and Date of Last Recorded Service.
 - **Monthly Spending Trend Chart:** Visual SVG monthly expenditure chart illustrating maintenance costs over time to track garage spending trends.
@@ -189,9 +195,12 @@ garahe-vehicle-maintenance-system/
 │   │   │   ├── Vehicles.jsx    # Vehicle listing, badges, search, add, edit
 │   │   │   ├── AddMaintenance.jsx # Multi-line jobs, shop name, next due km, copy last entry
 │   │   │   ├── MaintenanceHistory.jsx # Filterable table, reminder banners, inline edit, CSV export
+│   │   │   ├── GarageModal.jsx # Workspace switcher, code display, and mobile sync link
 │   │   │   ├── ConfirmModal.jsx # Accessible confirmation modal dialog
 │   │   │   ├── Toast.jsx       # Floating notification alert system
 │   │   │   └── DemoNotice.jsx  # Notification banner for demo mode
+│   │   ├── context/
+│   │   │   └── GarageContext.jsx # Workspace code generator, active garage state, URL parsing
 │   │   ├── utils/
 │   │   │   └── serviceReminders.js # Interval thresholds, overdue & due-soon calculation
 │   │   ├── hooks/
@@ -204,6 +213,7 @@ garahe-vehicle-maintenance-system/
 │   ├── db/
 │   │   ├── schema.sql          # Base table definitions (vehicles, maintenance_entries)
 │   │   ├── migrate_v2.sql      # Schema additions (shop_name, next_due_km)
+│   │   ├── migrate_v3.sql      # Multi-tenancy migration (garage_id column & index)
 │   │   ├── seed.sql            # Sample data for development
 │   │   ├── pool.js             # PostgreSQL connection pool
 │   │   └── run.js              # Utility to run .sql files
@@ -219,23 +229,18 @@ garahe-vehicle-maintenance-system/
 
 ---
 
-## Known issues and upcoming roadmap
+## Deployment checklist & next steps
 
-### Known limitations
-- **No authentication.** User accounts and JWT-based authentication are not yet implemented. Any visitor to the live site can view or modify records.
-- **Local deployment.** The Express API and PostgreSQL database are currently running locally pending production deployment.
-
-### Upcoming roadmap & deployment checklist
-1. **Feature Polish & Cleanup:**
-   - Remove experimental fuel logging module to keep the application cleanly focused on vehicle maintenance history, intervals, and expenses.
-   - Run end-to-end user regression tests across desktop and mobile screen sizes.
-2. **Production Database & API Deployment:**
-   - Provision managed PostgreSQL instance on Neon.
-   - Run `schema.sql` and `migrate_v2.sql` to establish production tables.
-   - Deploy Express backend on Render with production environment variables (`DATABASE_URL`, `CORS_ORIGINS`).
-3. **Frontend Production Deployment:**
-   - Configure GitHub Actions workflow for automated Vite build and deployment to GitHub Pages.
-   - Point `VITE_API_BASE_URL` to production Render API and switch `VITE_USE_MOCK_API=false`.
+1. **Production Database (Neon):**
+   - Provision free managed PostgreSQL database on Neon.
+   - Execute `schema.sql`, `migrate_v2.sql`, and `migrate_v3.sql` to establish production tables.
+2. **Backend API (Render):**
+   - Connect repository to a Render Web Service (`server/`).
+   - Configure production environment variables (`DATABASE_URL`, `CORS_ORIGINS`).
+   - Verify health checks at `/healthz` and `/readyz`.
+3. **Frontend Client (GitHub Pages):**
+   - Configure GitHub Actions build workflow for automated Vite deployment.
+   - Set `VITE_API_BASE_URL` to the live Render API URL and build for production.
 
 ---
 

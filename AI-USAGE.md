@@ -98,6 +98,21 @@ graded as the finals badge, and it is worth 100 points.
   - After testing the fuel logging feature, I determined that tracking fuel fill-ups is irrelevant to the core purpose of a vehicle maintenance log and adds unnecessary complexity. I decided to cleanly remove the fuel tracking components and routes in the next polishing session prior to deployment.
 - **Commit:** (Current session changes)
 
+### 2026-10-02 - Private Garage Workspaces (Zero-Friction Multi-Tenancy)
+
+- **Tool:** Google Antigravity (Gemini)
+- **What I asked for:** How to let individual users have their own private vehicle logs upon deployment without having to build full email/password registration, which would create friction for graders and risk collecting personal emails.
+- **What it gave back:**
+  - Designed and implemented "Option 2: Private Garage Workspaces": an anonymous, code-based multi-tenancy model.
+  - Added `garage_id` column to PostgreSQL `vehicles` table via `migrate_v3.sql`, with tenant isolation in all repository queries (`maintenanceRepo.js`).
+  - Express middleware extracting `X-Garage-Id` request header with CORS support.
+  - React `GarageContext.jsx` and `GarageModal.jsx` allowing users to create new garages, view and copy their unique code (e.g. `GRH-8492`), switch to the pre-seeded `Demo Showcase`, and generate direct mobile sync links (`?garage=CODE`).
+  - Added dual API parity in `mockApi.js` and `httpApi.js` so workspaces function identically in both demo mode and connected PostgreSQL mode.
+- **What I kept, what I changed, and why:**
+  - I chose this approach over traditional email/password auth because it completely avoids storing personal identifiable information (complying strictly with the course's privacy checklist and the Philippine Data Privacy Act), provides a zero-friction experience for graders (who can explore pre-seeded cars with 1 click), and allows me to seamlessly view my cars on my phone using a sync link.
+  - As planned, I completely removed all trial fuel logging features (component, routes, stat cards, API functions, and DB tables) across the client and server. This eliminated scope bloat and kept the application strictly and cleanly focused on vehicle maintenance intervals, service history, and operating costs.
+- **Commit:** (Current session changes)
+
 ---
 
 ## 2. Where the AI got it wrong

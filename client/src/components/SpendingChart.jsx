@@ -1,157 +1,309 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 /**
- * SpendingChart — renders a monthly bar chart of maintenance + fuel spending.
- * Uses plain SVG, no external chart library needed.
+ * SpendingChart — renders a full-width, responsive monthly bar chart of maintenance spending
+ * with an optional breakdown table toggle so users can inspect exact figures and trends clearly.
  */
-export default function SpendingChart({ entries = [], fuelLogs = [] }) {
-  const chartData = useMemo(() => {
-    // Aggregate by YYYY-MM
+export default function SpendingChart({ entries = [] }) {
+  const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'table'
+
+  const { chartData, totalSpend, avgMonthly, maxMonth } = useMemo(() => {
+    if (!entries || entries.length === 0) {
+      return { chartData: [], totalSpend: 0, avgMonthly: 0, maxMonth: null };
+    }
+
+    // Map month -> { total, count }
     const map = {};
+    let total = 0;
 
     for (const e of entries) {
       if (!e.date) continue;
-      const month = e.date.slice(0, 7); // "2026-09"
-      if (!map[month]) map[month] = { maintenance: 0, fuel: 0 };
-      map[month].maintenance += Number(e.cost) || 0;
+      const month = String(e.date).slice(0, 7); // "YYYY-MM"
+      const cost = Number(e.cost) || 0;
+      if (!map[month]) map[month] = { total: 0, count: 0 };
+      map[month].total += cost;
+      map[month].count += 1;
+      total += cost;
     }
 
-    for (const l of fuelLogs) {
-      if (!l.date) continue;
-      const month = l.date.slice(0, 7);
-      if (!map[month]) map[month] = { maintenance: 0, fuel: 0 };
-      map[month].fuel += Number(l.totalCost) || 0;
+    // Determine timeline: minimum 6 continuous months ending at current month
+    const now = new Date();
+    const allMonths = Object.keys(map).sort();
+    const earliestMonth = allMonths[0] || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Check how many months back to go (min 6, max 12)
+    const [eYear, eMonth] = earliestMonth.split('-').map(Number);
+    const monthsDiff = (now.getFullYear() - eYear) * 12 + (now.getMonth() + 1 - eMonth);
+    const countBack = Math.max(5, Math.min(11, isNaN(monthsDiff) ? 5 : monthsDiff));
+
+    const timeline = [];
+    for (let i = countBack; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const entry = map[key] || { total: 0, count: 0 };
+      timeline.push({
+        month: key,
+        label: d.toLocaleDateString('en-PH', { month: 'short', year: '2-digit' }),
+        fullLabel: d.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' }),
+        total: entry.total,
+        count: entry.count,
+      });
     }
 
-    // Sort by month, take last 12
-    const sorted = Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12);
+    // Active months average
+    const activeMonths = timeline.filter(m => m.total > 0);
+    const avg = activeMonths.length > 0 ? Math.round(total / activeMonths.length) : 0;
+    
+    // Peak month
+    let peak = null;
+    for (const m of timeline) {
+      if (!peak || m.total > peak.total) peak = m;
+    }
 
-    return sorted.map(([month, vals]) => ({
-      month,
-      label: new Date(month + '-01').toLocaleDateString('en-PH', { month: 'short', year: '2-digit' }),
-      maintenance: vals.maintenance,
-      fuel: vals.fuel,
-      total: vals.maintenance + vals.fuel,
-    }));
-  }, [entries, fuelLogs]);
+    return {
+      chartData: timeline,
+      totalSpend: total,
+      avgMonthly: avg,
+      maxMonth: peak && peak.total > 0 ? peak : null,
+    };
+  }, [entries]);
 
   if (chartData.length === 0) return null;
 
-  const maxVal = Math.max(...chartData.map(d => d.total), 1);
-  const chartH = 200;
-  const barW = 40;
-  const gap = 16;
-  const labelH = 36;
-  const paddingLeft = 64;
-  const chartWidth = chartData.length * (barW + gap) + paddingLeft + 16;
+  // Visual layout constants for SVG (ViewBox coordinate space)
+  const V_WIDTH = 760;
+  const V_HEIGHT = 220;
+  const PAD_LEFT = 75;
+  const PAD_RIGHT = 30;
+  const PAD_TOP = 25;
+  const PAD_BOTTOM = 38;
 
-  // Y-axis tick values
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => Math.round(maxVal * t));
+  const usableW = V_WIDTH - PAD_LEFT - PAD_RIGHT;
+  const usableH = V_HEIGHT - PAD_TOP - PAD_BOTTOM;
+
+  // Maximum value for scaling (round up to clean number)
+  const rawMax = Math.max(...chartData.map(d => d.total), 1);
+  let maxVal = Math.ceil(rawMax / 1000) * 1000;
+  if (maxVal < 5000) maxVal = 5000;
+
+  // 4 horizontal gridlines
+  const ticks = [0, 0.33, 0.66, 1].map(t => Math.round(maxVal * t));
+
+  const slotW = usableW / chartData.length;
+  const barW = Math.min(46, Math.max(22, slotW * 0.55));
 
   return (
     <div className="card spending-chart-card">
-      <div className="chart-legend" style={{ display: 'flex', gap: '1.25rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
-        <span><span className="legend-dot" style={{ background: 'var(--accent-color)' }} /> Maintenance</span>
-        <span><span className="legend-dot" style={{ background: 'var(--success-color)' }} /> Fuel</span>
+      {/* Header bar with summary & view switcher */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Period Spend</span>
+            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>₱{totalSpend.toLocaleString()}</div>
+          </div>
+          {avgMonthly > 0 && (
+            <div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Monthly Avg</span>
+              <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent-color)' }}>₱{avgMonthly.toLocaleString()}</div>
+            </div>
+          )}
+          {maxMonth && (
+            <div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peak Month</span>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#f8fafc' }}>
+                {maxMonth.label} (₱{maxMonth.total.toLocaleString()})
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* View Toggle */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '3px', border: '1px solid var(--card-border)' }}>
+          <button
+            type="button"
+            className="btn btn-xs"
+            style={{
+              background: viewMode === 'chart' ? 'var(--accent-color)' : 'transparent',
+              color: viewMode === 'chart' ? '#fff' : 'var(--text-secondary)',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: viewMode === 'chart' ? 600 : 400,
+            }}
+            onClick={() => setViewMode('chart')}
+          >
+            📊 Bar Chart
+          </button>
+          <button
+            type="button"
+            className="btn btn-xs"
+            style={{
+              background: viewMode === 'table' ? 'var(--accent-color)' : 'transparent',
+              color: viewMode === 'table' ? '#fff' : 'var(--text-secondary)',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: viewMode === 'table' ? 600 : 400,
+            }}
+            onClick={() => setViewMode('table')}
+          >
+            📋 Breakdown Table
+          </button>
+        </div>
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <svg
-          width={chartWidth}
-          height={chartH + labelH + 8}
-          style={{ display: 'block', minWidth: '100%' }}
-        >
-          {/* Y-axis gridlines + labels */}
-          {ticks.map((tick, i) => {
-            const y = chartH - (tick / maxVal) * chartH;
-            return (
-              <g key={i}>
-                <line
-                  x1={paddingLeft}
-                  y1={y}
-                  x2={chartWidth - 8}
-                  y2={y}
-                  stroke="rgba(255,255,255,0.07)"
-                  strokeDasharray="4 4"
-                />
-                <text
-                  x={paddingLeft - 8}
-                  y={y + 4}
-                  fill="#64748b"
-                  fontSize="11"
-                  textAnchor="end"
-                >
-                  {tick >= 1000 ? `₱${(tick / 1000).toFixed(0)}k` : `₱${tick}`}
-                </text>
-              </g>
-            );
-          })}
 
-          {/* Bars */}
-          {chartData.map((d, i) => {
-            const x = paddingLeft + i * (barW + gap);
-            const mainH = (d.maintenance / maxVal) * chartH;
-            const fuelH = (d.fuel / maxVal) * chartH;
-            const stackedH = mainH + fuelH;
+      {viewMode === 'chart' ? (
+        <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+          <svg
+            viewBox={`0 0 ${V_WIDTH} ${V_HEIGHT}`}
+            style={{ width: '100%', minWidth: '450px', height: 'auto', display: 'block' }}
+          >
+            <defs>
+              <linearGradient id="spendingBarGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#0284c7" stopOpacity="0.75" />
+              </linearGradient>
+            </defs>
 
-            return (
-              <g key={d.month}>
-                {/* Fuel bar (bottom) */}
-                {fuelH > 0 && (
-                  <rect
-                    x={x}
-                    y={chartH - fuelH}
-                    width={barW}
-                    height={fuelH}
-                    rx={fuelH > 0 && mainH === 0 ? 4 : 0}
-                    fill="var(--success-color)"
-                    opacity={0.75}
-                  >
-                    <title>Fuel: ₱{d.fuel.toLocaleString()}</title>
-                  </rect>
-                )}
-                {/* Maintenance bar (on top) */}
-                {mainH > 0 && (
-                  <rect
-                    x={x}
-                    y={chartH - stackedH}
-                    width={barW}
-                    height={mainH}
-                    rx={4}
-                    fill="var(--accent-color)"
-                    opacity={0.85}
-                  >
-                    <title>Maintenance: ₱{d.maintenance.toLocaleString()}</title>
-                  </rect>
-                )}
-                {/* Month label */}
-                <text
-                  x={x + barW / 2}
-                  y={chartH + labelH - 4}
-                  fill="#64748b"
-                  fontSize="10"
-                  textAnchor="middle"
-                >
-                  {d.label}
-                </text>
-                {/* Total label on top of bar */}
-                {d.total > 0 && (
+            {/* Y-axis gridlines and numeric ticks */}
+            {ticks.map((tick, i) => {
+              const y = PAD_TOP + usableH - (tick / maxVal) * usableH;
+              return (
+                <g key={i}>
+                  <line
+                    x1={PAD_LEFT}
+                    y1={y}
+                    x2={V_WIDTH - PAD_RIGHT}
+                    y2={y}
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeDasharray={tick === 0 ? 'none' : '4 4'}
+                    strokeWidth={tick === 0 ? 1.5 : 1}
+                  />
                   <text
-                    x={x + barW / 2}
-                    y={chartH - stackedH - 5}
+                    x={PAD_LEFT - 10}
+                    y={y + 4}
                     fill="#94a3b8"
-                    fontSize="9"
+                    fontSize="11"
+                    fontFamily="inherit"
+                    textAnchor="end"
+                  >
+                    {tick >= 1000 ? `₱${(tick / 1000).toLocaleString()}k` : `₱${tick}`}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Bars and Month Labels */}
+            {chartData.map((d, i) => {
+              const centerX = PAD_LEFT + i * slotW + slotW / 2;
+              const barX = centerX - barW / 2;
+              const barH = (d.total / maxVal) * usableH;
+              const barY = PAD_TOP + usableH - barH;
+
+              return (
+                <g key={d.month} className="chart-bar-group">
+                  {/* Subtle hover area */}
+                  <rect
+                    x={PAD_LEFT + i * slotW + 2}
+                    y={PAD_TOP}
+                    width={slotW - 4}
+                    height={usableH}
+                    fill="transparent"
+                  >
+                    <title>{`${d.fullLabel}: ₱${d.total.toLocaleString()} (${d.count} job${d.count !== 1 ? 's' : ''})`}</title>
+                  </rect>
+
+                  {/* Active bar or ₱0 indicator */}
+                  {d.total > 0 ? (
+                    <>
+                      <rect
+                        x={barX}
+                        y={barY}
+                        width={barW}
+                        height={Math.max(barH, 4)}
+                        rx={5}
+                        fill="url(#spendingBarGrad)"
+                      >
+                        <title>{`${d.fullLabel}: ₱${d.total.toLocaleString()} (${d.count} job${d.count !== 1 ? 's' : ''})`}</title>
+                      </rect>
+                      {/* Cost value on top of bar */}
+                      <text
+                        x={centerX}
+                        y={Math.max(barY - 7, PAD_TOP - 6)}
+                        fill="#f8fafc"
+                        fontSize="11"
+                        fontWeight="600"
+                        fontFamily="inherit"
+                        textAnchor="middle"
+                      >
+                        {d.total >= 10000 ? `₱${(d.total / 1000).toFixed(1)}k` : `₱${d.total.toLocaleString()}`}
+                      </text>
+                    </>
+                  ) : (
+                    /* Faint dash at baseline for zero-spend months */
+                    <line
+                      x1={centerX - 8}
+                      y1={PAD_TOP + usableH}
+                      x2={centerX + 8}
+                      y2={PAD_TOP + usableH}
+                      stroke="rgba(255,255,255,0.25)"
+                      strokeWidth="2"
+                    >
+                      <title>{`${d.fullLabel}: ₱0 spent`}</title>
+                    </line>
+                  )}
+
+                  {/* Month X-axis label */}
+                  <text
+                    x={centerX}
+                    y={V_HEIGHT - 12}
+                    fill={d.total > 0 ? '#e2e8f0' : '#64748b'}
+                    fontSize="11"
+                    fontWeight={d.total > 0 ? '600' : '400'}
+                    fontFamily="inherit"
                     textAnchor="middle"
                   >
-                    {d.total >= 1000 ? `₱${(d.total / 1000).toFixed(1)}k` : `₱${d.total}`}
+                    {d.label}
                   </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      </div>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      ) : (
+        /* Breakdown Table View */
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                <th style={{ padding: '0.6rem 0.75rem' }}>Month</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center' }}>Jobs Logged</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'right' }}>Total Spent</th>
+                <th style={{ padding: '0.6rem 0.75rem', textAlign: 'right' }}>Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chartData.map(d => {
+                const share = totalSpend > 0 ? Math.round((d.total / totalSpend) * 100) : 0;
+                return (
+                  <tr key={d.month} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500, color: d.total > 0 ? '#f8fafc' : '#64748b' }}>
+                      {d.fullLabel}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      {d.count}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', fontWeight: 600, color: d.total > 0 ? 'var(--accent-color)' : '#64748b' }}>
+                      ₱{d.total.toLocaleString()}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.825rem' }}>
+                      {share}%
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

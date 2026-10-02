@@ -42,47 +42,57 @@ export function computeReminders(entries, currentMileage) {
 
   for (const [jobType, interval] of Object.entries(SERVICE_INTERVALS)) {
     const last = latestByType[jobType]
-
-    // Also check next_due_km set explicitly on the most recent entry
-    if (last?.nextDueKm != null) {
-      const kmLeft = last.nextDueKm - currentMileage
-      if (kmLeft <= 0) {
-        reminders.push({ jobType, status: 'overdue', detail: `${jobType} next service was due at ${last.nextDueKm.toLocaleString()} km` })
-        continue
-      } else if (kmLeft <= 500) {
-        reminders.push({ jobType, status: 'due-soon', detail: `${jobType} due in ${kmLeft.toLocaleString()} km` })
-        continue
-      }
-    }
-
     if (!last) continue // No history — can't compute without a baseline
 
     const lastDate = new Date(last.date)
     lastDate.setHours(0, 0, 0, 0)
     const daysSince = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24))
-    const kmSince = currentMileage - last.mileage
 
     let status = null
     let detail = null
 
-    // Check km interval
-    if (interval.km != null) {
-      const kmLeft = interval.km - kmSince
-      if (kmLeft <= 0) {
+    // 1. Mileage check:
+    // If the user specified an explicit nextDueKm on their last service, that custom target
+    // completely replaces the generic vehicle interval.km!
+    if (last.nextDueKm != null && !isNaN(Number(last.nextDueKm))) {
+      const targetKm = Number(last.nextDueKm)
+      const kmLeft = targetKm - currentMileage
+      if (kmLeft < 0) {
         status = 'overdue'
-        detail = `${jobType} overdue — ${Math.abs(kmLeft).toLocaleString()} km past service interval`
+        detail = `${jobType} overdue by ${Math.abs(kmLeft).toLocaleString()} km (scheduled for ${targetKm.toLocaleString()} km)`
+      } else if (kmLeft === 0) {
+        status = 'due-soon'
+        detail = `${jobType} due now (reached ${targetKm.toLocaleString()} km target)`
+      } else if (kmLeft <= 500) {
+        status = 'due-soon'
+        detail = `${jobType} due in ~${kmLeft.toLocaleString()} km (at ${targetKm.toLocaleString()} km)`
+      }
+      // If kmLeft > 500, it is NOT due yet by mileage!
+    } else if (interval.km != null) {
+      // Default periodic km interval (e.g. every 5,000 km)
+      const kmSince = currentMileage - last.mileage
+      const kmLeft = interval.km - kmSince
+      if (kmLeft < 0) {
+        status = 'overdue'
+        detail = `${jobType} overdue by ${Math.abs(kmLeft).toLocaleString()} km past service interval`
+      } else if (kmLeft === 0) {
+        status = 'due-soon'
+        detail = `${jobType} due now (reached ${interval.km.toLocaleString()} km interval)`
       } else if (kmLeft <= 500) {
         status = 'due-soon'
         detail = `${jobType} due in ~${kmLeft.toLocaleString()} km`
       }
     }
 
-    // Check day interval (only upgrades severity, doesn't downgrade)
+    // 2. Day/time interval check (only upgrades severity, doesn't downgrade)
     if (interval.days != null) {
       const daysLeft = interval.days - daysSince
-      if (daysLeft <= 0 && status !== 'overdue') {
+      if (daysLeft < 0 && status !== 'overdue') {
         status = 'overdue'
-        detail = `${jobType} overdue — ${Math.abs(daysLeft)} days past service interval`
+        detail = `${jobType} overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''} past interval`
+      } else if (daysLeft === 0 && !status) {
+        status = 'due-soon'
+        detail = `${jobType} due today`
       } else if (daysLeft <= 30 && !status) {
         status = 'due-soon'
         detail = `${jobType} due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`

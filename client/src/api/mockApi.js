@@ -6,26 +6,34 @@
 
 import seed from './seed.json'
 
-const KEY = 'garahe:data'
+function getStorageKey() {
+  const garageId = (localStorage.getItem('garahe:garage_id') || 'demo').toLowerCase();
+  return garageId === 'demo' ? 'garahe:data' : `garahe:data:${garageId}`;
+}
 
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function read() {
-  const stored = localStorage.getItem(KEY)
+  const key = getStorageKey();
+  const stored = localStorage.getItem(key);
   if (stored) {
     try {
-      return JSON.parse(stored)
+      return JSON.parse(stored);
     } catch {
-      localStorage.removeItem(KEY)
+      localStorage.removeItem(key);
     }
   }
-  localStorage.setItem(KEY, JSON.stringify(seed))
-  return seed
+  const initial = key === 'garahe:data'
+    ? seed
+    : { vehicles: [], maintenanceEntries: [] };
+  localStorage.setItem(key, JSON.stringify(initial));
+  return initial;
 }
 
 function write(data) {
-  localStorage.setItem(KEY, JSON.stringify(data))
-  return data
+  const key = getStorageKey();
+  localStorage.setItem(key, JSON.stringify(data));
+  return data;
 }
 
 // -- VEHICLES --
@@ -75,7 +83,6 @@ export async function deleteVehicle(id) {
   const data = read()
   data.vehicles = (data.vehicles || []).filter((row) => String(row.id) !== String(id))
   data.maintenanceEntries = (data.maintenanceEntries || []).filter((row) => String(row.vehicleId) !== String(id))
-  data.fuelLogs = (data.fuelLogs || []).filter((row) => String(row.vehicleId) !== String(id))
   write(data)
 }
 
@@ -133,64 +140,5 @@ export async function deleteMaintenanceEntry(id) {
   await delay()
   const data = read()
   data.maintenanceEntries = (data.maintenanceEntries || []).filter((row) => String(row.id) !== String(id))
-  write(data)
-}
-
-// -- FUEL LOGS --
-
-export async function listFuelLogs(vehicleId) {
-  await delay()
-  const logs = (read().fuelLogs || []).map(l => ({
-    ...l,
-    totalCost: Number(l.liters) * Number(l.pricePerLiter),
-  }))
-  if (vehicleId) {
-    return logs.filter(l => String(l.vehicleId) === String(vehicleId)).sort((a, b) => new Date(b.date) - new Date(a.date))
-  }
-  return logs.sort((a, b) => new Date(b.date) - new Date(a.date))
-}
-
-export async function createFuelLog(input) {
-  await delay()
-  const data = read()
-  const created = {
-    ...input,
-    totalCost: Number(input.liters) * Number(input.pricePerLiter),
-    id: crypto.randomUUID()
-  }
-  data.fuelLogs = [...(data.fuelLogs || []), created]
-
-  // Update vehicle mileage
-  const vehicles = data.vehicles || []
-  const vIndex = vehicles.findIndex(v => String(v.id) === String(input.vehicleId))
-  if (vIndex !== -1 && input.mileage > vehicles[vIndex].currentMileage) {
-    vehicles[vIndex].currentMileage = input.mileage;
-  }
-  data.vehicles = vehicles;
-
-  write(data)
-  return created
-}
-
-export async function updateFuelLog(id, input) {
-  await delay()
-  const data = read()
-  const rows = data.fuelLogs || []
-  const index = rows.findIndex((row) => String(row.id) === String(id))
-  if (index === -1) throw new Error('Not found')
-  rows[index] = {
-    ...rows[index],
-    ...input,
-    totalCost: Number(input.liters) * Number(input.pricePerLiter),
-  }
-  data.fuelLogs = rows
-  write(data)
-  return rows[index]
-}
-
-export async function deleteFuelLog(id) {
-  await delay()
-  const data = read()
-  data.fuelLogs = (data.fuelLogs || []).filter((row) => String(row.id) !== String(id))
   write(data)
 }

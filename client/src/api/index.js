@@ -38,8 +38,4 @@ export const {
   createMaintenanceEntry,
   updateMaintenanceEntry,
   deleteMaintenanceEntry,
-  listFuelLogs,
-  createFuelLog,
-  updateFuelLog,
-  deleteFuelLog,
 } = implementation

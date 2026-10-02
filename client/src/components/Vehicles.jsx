@@ -364,7 +364,6 @@ export default function Vehicles() {
                     </div>
                     <div className="flex-gap">
                       <Link to={`/vehicles/${v.id}/history`} className="btn btn-outline">View</Link>
-                      <Link to={`/vehicles/${v.id}/fuel`} className="btn btn-outline">⛽ Fuel</Link>
                       <button className="btn btn-outline" onClick={() => startEdit(v)}>Edit</button>
                       <button className="btn btn-danger" onClick={() => setDeleteTarget(v)}>Delete</button>
                     </div>

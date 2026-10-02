@@ -8,9 +8,5 @@
     { "id": "m-2", "vehicleId": "v-1", "jobType": "Brake Pads", "date": "2026-09-15", "mileage": 85420, "cost": 2500, "notes": "Replaced front pads", "nextDueKm": null, "shopName": "Midas BGC" },
     { "id": "m-3", "vehicleId": "v-1", "jobType": "Tire Change", "date": "2026-09-15", "mileage": 85420, "cost": 2500, "notes": "New rear tires", "nextDueKm": null, "shopName": "Midas BGC" },
     { "id": "m-4", "vehicleId": "v-2", "jobType": "PMS", "date": "2026-08-20", "mileage": 64405, "cost": 3200, "notes": "Petron 10W-40 semi-synthetic", "nextDueKm": 69405, "shopName": "Honda Carmona" }
-  ],
-  "fuelLogs": [
-    { "id": "f-1", "vehicleId": "v-1", "date": "2026-09-20", "mileage": 85420, "liters": 40, "pricePerLiter": 62.50, "totalCost": 2500, "notes": "Shell V-Power" },
-    { "id": "f-2", "vehicleId": "v-2", "date": "2026-09-18", "mileage": 64405, "liters": 35, "pricePerLiter": 61.00, "totalCost": 2135, "notes": "Petron Blaze 100" }
   ]
 }

@@ -14,22 +14,32 @@ const JOB_TYPES = [
 ];
 
 function exportCSV(vehicle, entries) {
-  const headers = ['Date', 'Job Type', 'Mileage (km)', 'Cost (₱)', 'Next Due (km)', 'Shop', 'Notes'];
-  const rows = entries.map(e => [
-    e.date,
-    `"${(e.jobType || '').replace(/"/g, '""')}"`,
-    e.mileage,
-    e.cost,
-    e.nextDueKm ?? '',
-    `"${(e.shopName || '').replace(/"/g, '""')}"`,
-    `"${(e.notes || '').replace(/"/g, '""')}"`,
-  ]);
-  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const headers = ['Service Date', 'Job / Service Type', 'Odometer (km)', 'Cost (₱)', 'Next Due (km)', 'Service Shop', 'Notes'];
+  const rows = entries.map(e => {
+    const cleanDate = e.date ? String(e.date).split('T')[0] : '';
+    const cleanJob = String(e.jobType || '').replace(/"/g, '""');
+    const cleanShop = String(e.shopName || '').replace(/"/g, '""');
+    const cleanNotes = String(e.notes || '').replace(/"/g, '""');
+    const cleanCost = e.cost != null && e.cost !== '' ? Number(e.cost) : 0;
+    const cleanNextDue = e.nextDueKm != null && e.nextDueKm !== '' ? e.nextDueKm : '';
+    return [
+      cleanDate,
+      `"${cleanJob}"`,
+      e.mileage ?? '',
+      cleanCost,
+      cleanNextDue,
+      `"${cleanShop}"`,
+      `"${cleanNotes}"`,
+    ];
+  });
+
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  // Prepend \uFEFF (UTF-8 BOM) so Excel on Windows properly recognises UTF-8 (Philippine Peso ₱ symbol)
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${vehicle.model.replace(/\s+/g, '-')}-maintenance.csv`;
+  a.download = `${(vehicle.model || 'vehicle').replace(/\s+/g, '-')}-maintenance-log.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -274,12 +284,13 @@ export default function MaintenanceHistory() {
         </div>
         <div className="flex-gap">
           <button
+            type="button"
             className="btn btn-outline"
             onClick={() => exportCSV(vehicle, entries)}
             disabled={entries.length === 0}
-            title="Export to CSV"
+            title="Export maintenance log to CSV (ready to open in Excel or print)"
           >
-            ↓ CSV
+            ⬇ Export / Print CSV
           </button>
           <Link to="/vehicles" className="btn btn-outline">← Back</Link>
           <Link to={`/vehicles/${id}/add-maintenance`} className="btn btn-primary">+ Add Maintenance</Link>

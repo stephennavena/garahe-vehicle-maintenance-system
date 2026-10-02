@@ -8,18 +8,28 @@ const app = express()
 
 // CORS before the routes. Middleware registered after a route never sees that
 // route's requests.
-//
-// Name your origins. app.use(cors()) with no options sends
-// Access-Control-Allow-Origin: *, which lets any site on the internet call this
-// API from a visitor's browser, and is incompatible with cookies.
 const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
 
 app.use(helmet())
-app.use(cors({ origin: allowedOrigins }))
+app.use(cors({
+  origin: allowedOrigins,
+  allowedHeaders: ['Content-Type', 'X-Garage-Id'],
+}))
 app.use(express.json({ limit: '2mb' })) // allow larger payloads for photo URLs
+
+// ── Garage Isolation Middleware ───────────────────────────────────────────────
+// Extracts the active garage code from the X-Garage-Id header (defaults to 'demo').
+app.use((request, response, next) => {
+  const raw = request.headers['x-garage-id']
+  const garageId = typeof raw === 'string' && raw.trim()
+    ? raw.trim().toLowerCase().slice(0, 64)
+    : 'demo'
+  request.garageId = garageId
+  next()
+})
 
 // ── Health checks ────────────────────────────────────────────────────────────
 
@@ -62,7 +72,7 @@ function validateEntry(body) {
   const mileage = Number(body.mileage)
   const cost = Number(body.cost)
   const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
-  const next_due_km = body.next_due_km != null ? Number(body.next_due_km) : null
+  const next_due_km = (body.next_due_km !== '' && body.next_due_km != null) ? Number(body.next_due_km) : null
   const shop_name = typeof body.shop_name === 'string' ? body.shop_name.trim() : ''
 
   if (!Number.isInteger(vehicle_id) || vehicle_id < 1) errors.push('vehicle_id must be a valid vehicle id')
@@ -80,30 +90,12 @@ function validateEntry(body) {
   return { errors, value: { vehicle_id, job_type, date, mileage, cost, notes, next_due_km, shop_name } }
 }
 
-function validateFuelLog(body) {
-  const errors = []
-  const vehicle_id = Number(body.vehicle_id)
-  const date = typeof body.date === 'string' ? body.date.trim() : ''
-  const mileage = Number(body.mileage)
-  const liters = Number(body.liters)
-  const price_per_liter = Number(body.price_per_liter)
-  const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
-
-  if (!Number.isInteger(vehicle_id) || vehicle_id < 1) errors.push('vehicle_id must be a valid vehicle id')
-  if (!date || isNaN(Date.parse(date))) errors.push('date must be a valid date (YYYY-MM-DD)')
-  if (!Number.isInteger(mileage) || mileage < 0) errors.push('mileage must be a non-negative whole number')
-  if (isNaN(liters) || liters <= 0) errors.push('liters must be a positive number')
-  if (isNaN(price_per_liter) || price_per_liter <= 0) errors.push('price_per_liter must be a positive number')
-  if (notes.length > 2000) errors.push('notes must be 2000 characters or fewer')
-
-  return { errors, value: { vehicle_id, date, mileage, liters, price_per_liter, notes } }
-}
 
 // ── Vehicle routes ────────────────────────────────────────────────────────────
 
 app.get('/api/vehicles', async (request, response, next) => {
   try {
-    response.json(await repo.getAllVehicles(pool))
+    response.json(await repo.getAllVehicles(pool, request.garageId))
   } catch (error) {
     next(error)
   }
@@ -111,7 +103,7 @@ app.get('/api/vehicles', async (request, response, next) => {
 
 app.get('/api/vehicles/:id', async (request, response, next) => {
   try {
-    const row = await repo.getVehicleById(pool, request.params.id)
+    const row = await repo.getVehicleById(pool, request.params.id, request.garageId)
     if (!row) return response.status(404).json({ error: 'Vehicle not found' })
     response.json(row)
   } catch (error) {
@@ -124,7 +116,7 @@ app.post('/api/vehicles', async (request, response, next) => {
   if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
 
   try {
-    response.status(201).json(await repo.createVehicle(pool, value))
+    response.status(201).json(await repo.createVehicle(pool, { ...value, garage_id: request.garageId }))
   } catch (error) {
     next(error)
   }
@@ -135,7 +127,7 @@ app.put('/api/vehicles/:id', async (request, response, next) => {
   if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
 
   try {
-    const row = await repo.updateVehicle(pool, request.params.id, value)
+    const row = await repo.updateVehicle(pool, request.params.id, value, request.garageId)
     if (!row) return response.status(404).json({ error: 'Vehicle not found' })
     response.json(row)
   } catch (error) {
@@ -145,7 +137,7 @@ app.put('/api/vehicles/:id', async (request, response, next) => {
 
 app.delete('/api/vehicles/:id', async (request, response, next) => {
   try {
-    const removed = await repo.deleteVehicle(pool, request.params.id)
+    const removed = await repo.deleteVehicle(pool, request.params.id, request.garageId)
     if (!removed) return response.status(404).json({ error: 'Vehicle not found' })
     response.status(204).end()
   } catch (error) {
@@ -158,7 +150,7 @@ app.delete('/api/vehicles/:id', async (request, response, next) => {
 app.get('/api/maintenance', async (request, response, next) => {
   try {
     const { vehicleId } = request.query
-    response.json(await repo.getAllEntries(pool, vehicleId || null))
+    response.json(await repo.getAllEntries(pool, vehicleId || null, request.garageId))
   } catch (error) {
     next(error)
   }
@@ -166,7 +158,7 @@ app.get('/api/maintenance', async (request, response, next) => {
 
 app.get('/api/maintenance/:id', async (request, response, next) => {
   try {
-    const row = await repo.getEntryById(pool, request.params.id)
+    const row = await repo.getEntryById(pool, request.params.id, request.garageId)
     if (!row) return response.status(404).json({ error: 'Entry not found' })
     response.json(row)
   } catch (error) {
@@ -179,7 +171,9 @@ app.post('/api/maintenance', async (request, response, next) => {
   if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
 
   try {
-    response.status(201).json(await repo.createEntry(pool, value))
+    const created = await repo.createEntry(pool, value, request.garageId)
+    if (!created) return response.status(404).json({ error: 'Vehicle not found in this garage' })
+    response.status(201).json(created)
   } catch (error) {
     next(error)
   }
@@ -190,8 +184,8 @@ app.put('/api/maintenance/:id', async (request, response, next) => {
   if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
 
   try {
-    const row = await repo.updateEntry(pool, request.params.id, value)
-    if (!row) return response.status(404).json({ error: 'Entry not found' })
+    const row = await repo.updateEntry(pool, request.params.id, value, request.garageId)
+    if (!row) return response.status(404).json({ error: 'Entry not found in this garage' })
     response.json(row)
   } catch (error) {
     next(error)
@@ -200,58 +194,14 @@ app.put('/api/maintenance/:id', async (request, response, next) => {
 
 app.delete('/api/maintenance/:id', async (request, response, next) => {
   try {
-    const removed = await repo.deleteEntry(pool, request.params.id)
-    if (!removed) return response.status(404).json({ error: 'Entry not found' })
+    const removed = await repo.deleteEntry(pool, request.params.id, request.garageId)
+    if (!removed) return response.status(404).json({ error: 'Entry not found in this garage' })
     response.status(204).end()
   } catch (error) {
     next(error)
   }
 })
 
-// ── Fuel log routes ───────────────────────────────────────────────────────────
-
-app.get('/api/fuel', async (request, response, next) => {
-  try {
-    const { vehicleId } = request.query
-    response.json(await repo.getAllFuelLogs(pool, vehicleId || null))
-  } catch (error) {
-    next(error)
-  }
-})
-
-app.post('/api/fuel', async (request, response, next) => {
-  const { errors, value } = validateFuelLog(request.body ?? {})
-  if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
-
-  try {
-    response.status(201).json(await repo.createFuelLog(pool, value))
-  } catch (error) {
-    next(error)
-  }
-})
-
-app.put('/api/fuel/:id', async (request, response, next) => {
-  const { errors, value } = validateFuelLog(request.body ?? {})
-  if (errors.length > 0) return response.status(400).json({ error: errors.join('; ') })
-
-  try {
-    const row = await repo.updateFuelLog(pool, request.params.id, value)
-    if (!row) return response.status(404).json({ error: 'Fuel log not found' })
-    response.json(row)
-  } catch (error) {
-    next(error)
-  }
-})
-
-app.delete('/api/fuel/:id', async (request, response, next) => {
-  try {
-    const removed = await repo.deleteFuelLog(pool, request.params.id)
-    if (!removed) return response.status(404).json({ error: 'Fuel log not found' })
-    response.status(204).end()
-  } catch (error) {
-    next(error)
-  }
-})
 
 // ── Catch-all & error handler ─────────────────────────────────────────────────
 
