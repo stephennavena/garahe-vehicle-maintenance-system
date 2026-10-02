@@ -10,7 +10,7 @@ import './styles.css';
 export default function App() {
   return (
     <GarageProvider>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
