@@ -164,3 +164,19 @@ export async function deleteMaintenanceEntry(id) {
   await request(`/api/maintenance/${id}`, { method: 'DELETE' })
 }
 
+// ── Garages ────────────────────────────────────────────────────────────────────
+
+export async function getGarage(code) {
+  const cleanCode = (code || '').trim().toLowerCase().slice(0, 64)
+  return request(`/api/garages/${cleanCode}`)
+}
+
+export async function createGarageRecord({ id, name }) {
+  const cleanCode = (id || '').trim().toLowerCase().slice(0, 64)
+  return request('/api/garages', {
+    method: 'POST',
+    body: JSON.stringify({ id: cleanCode, name }),
+  })
+}
+
+

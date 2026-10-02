@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGarage, generateGarageCode } from '../context/GarageContext';
 import { useToast, ToastContainer } from './Toast';
+import { getGarage, createGarageRecord } from '../api';
 
 export default function GarageModal() {
   const { garage, isDemo, switchGarage, createGarage, switchToDemo, getShareLink, modalOpen, closeModal } = useGarage();
@@ -9,6 +10,7 @@ export default function GarageModal() {
   const [newCode, setNewCode] = useState(() => generateGarageCode());
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const { toasts, showToast } = useToast();
 
   if (!modalOpen) return null;
@@ -24,7 +26,7 @@ export default function GarageModal() {
     showToast('Direct account link copied! Send it to your phone or paste in any browser.', 'success');
   }
 
-  function handleCreate(e) {
+  async function handleCreate(e) {
     e.preventDefault();
     const code = (newCode || generateGarageCode()).trim().toLowerCase();
     if (!code) {
@@ -32,21 +34,40 @@ export default function GarageModal() {
       return;
     }
     const name = newName.trim() || `Garage ${code.toUpperCase()}`;
+    setVerifying(true);
+    try {
+      await createGarageRecord({ id: code, name });
+    } catch (err) {
+      console.warn('Could not persist garage record:', err);
+    } finally {
+      setVerifying(false);
+    }
     createGarage(name, code);
     showToast(`Created account "${name}"!`, 'success');
     closeModal();
   }
 
-  function handleJoin(e) {
+  async function handleJoin(e) {
     e.preventDefault();
     const code = joinCode.trim().toLowerCase();
     if (!code) {
       setError('Please enter a garage code.');
       return;
     }
-    switchGarage(code);
-    showToast(`Logged into Garage ${code.toUpperCase()}!`, 'success');
-    closeModal();
+
+    setVerifying(true);
+    setError('');
+
+    try {
+      const result = await getGarage(code);
+      switchGarage(code, result.name);
+      showToast(`Logged into ${result.name}!`, 'success');
+      closeModal();
+    } catch (err) {
+      setError(`❌ No garage found with code "${code.toUpperCase()}". Please check your code or click "+ New Account" to create one.`);
+    } finally {
+      setVerifying(false);
+    }
   }
 
   function handleDemo() {
@@ -230,8 +251,8 @@ export default function GarageModal() {
                 <button type="button" className="btn btn-secondary" onClick={() => setTab('current')}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  ➕ Create & Open Garage
+                <button type="submit" className="btn btn-primary" disabled={verifying}>
+                  {verifying ? 'Creating...' : '➕ Create & Open Garage'}
                 </button>
               </div>
             </form>
@@ -279,8 +300,8 @@ export default function GarageModal() {
                 <button type="button" className="btn btn-secondary" onClick={() => setTab('current')}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={!joinCode.trim()}>
-                  🔑 Log In to Garage
+                <button type="submit" className="btn btn-primary" disabled={!joinCode.trim() || verifying}>
+                  {verifying ? 'Checking Code...' : '🔑 Log In to Garage'}
                 </button>
               </div>
             </form>

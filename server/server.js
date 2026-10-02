@@ -93,6 +93,73 @@ function validateEntry(body) {
   return { errors, value: { vehicle_id, job_type, date, mileage, cost, notes, next_due_km, shop_name } }
 }
 
+// ── Auto-ensure garages table exists ──────────────────────────────────────────
+async function initGaragesTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS garages (
+        id VARCHAR(64) PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
+      INSERT INTO garages (id, name) VALUES ('demo', 'Demo Showcase')
+      ON CONFLICT (id) DO NOTHING;
+    `)
+  } catch (err) {
+    console.error('Garages table init notice:', err.message)
+  }
+}
+initGaragesTable()
+
+// ── Garage routes ─────────────────────────────────────────────────────────────
+
+app.get('/api/garages/:id', async (request, response, next) => {
+  try {
+    const rawId = (request.params.id || '').trim().toLowerCase().slice(0, 64)
+    if (!rawId) return response.status(400).json({ error: 'Garage code is required' })
+    if (rawId === 'demo') {
+      return response.json({ id: 'demo', name: 'Demo Showcase', exists: true })
+    }
+
+    const result = await pool.query('SELECT id, name FROM garages WHERE id = $1', [rawId])
+    if (result.rows[0]) {
+      return response.json({ ...result.rows[0], exists: true })
+    }
+
+    // Fallback: check if vehicles already exist under this garage_id
+    const vCheck = await pool.query('SELECT 1 FROM vehicles WHERE garage_id = $1 LIMIT 1', [rawId])
+    if (vCheck.rows[0]) {
+      const fallbackName = `Garage ${rawId.toUpperCase()}`
+      await pool.query('INSERT INTO garages (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING', [rawId, fallbackName])
+      return response.json({ id: rawId, name: fallbackName, exists: true })
+    }
+
+    return response.status(404).json({ error: `No garage found with code "${rawId.toUpperCase()}".` })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/garages', async (request, response, next) => {
+  try {
+    const rawId = (request.body.id || '').trim().toLowerCase().slice(0, 64)
+    const rawName = (request.body.name || '').trim().slice(0, 80) || `Garage ${rawId.toUpperCase()}`
+    if (!rawId) {
+      return response.status(400).json({ error: 'Garage code is required.' })
+    }
+
+    const result = await pool.query(
+      `INSERT INTO garages (id, name)
+       VALUES ($1, $2)
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id, name`,
+      [rawId, rawName]
+    )
+    response.status(201).json({ ...result.rows[0], exists: true })
+  } catch (error) {
+    next(error)
+  }
+})
 
 // ── Vehicle routes ────────────────────────────────────────────────────────────
 

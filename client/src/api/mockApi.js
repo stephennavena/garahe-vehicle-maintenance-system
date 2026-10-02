@@ -142,3 +142,47 @@ export async function deleteMaintenanceEntry(id) {
   data.maintenanceEntries = (data.maintenanceEntries || []).filter((row) => String(row.id) !== String(id))
   write(data)
 }
+
+// ── Garages ────────────────────────────────────────────────────────────────────
+
+export async function getGarage(code) {
+  await delay()
+  const cleanCode = (code || '').trim().toLowerCase()
+  if (cleanCode === 'demo') {
+    return { id: 'demo', name: 'Demo Showcase', exists: true }
+  }
+  let registered = {}
+  try {
+    registered = JSON.parse(localStorage.getItem('garahe:registered_garages') || '{}')
+  } catch {}
+
+  if (registered[cleanCode]) {
+    return { id: cleanCode, name: registered[cleanCode], exists: true }
+  }
+
+  // Check if any vehicles were saved under this code in localStorage
+  const existingData = localStorage.getItem(`garahe:data:${cleanCode}`)
+  if (existingData) {
+    try {
+      const parsed = JSON.parse(existingData)
+      if (parsed.vehicles && parsed.vehicles.length > 0) {
+        return { id: cleanCode, name: `Garage ${cleanCode.toUpperCase()}`, exists: true }
+      }
+    } catch {}
+  }
+
+  throw new Error(`No garage found with code "${cleanCode.toUpperCase()}".`)
+}
+
+export async function createGarageRecord({ id, name }) {
+  await delay()
+  const cleanCode = (id || '').trim().toLowerCase()
+  const cleanName = name || `Garage ${cleanCode.toUpperCase()}`
+  let registered = {}
+  try {
+    registered = JSON.parse(localStorage.getItem('garahe:registered_garages') || '{}')
+  } catch {}
+  registered[cleanCode] = cleanName
+  localStorage.setItem('garahe:registered_garages', JSON.stringify(registered))
+  return { id: cleanCode, name: cleanName, exists: true }
+}

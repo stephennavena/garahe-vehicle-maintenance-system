@@ -2,6 +2,12 @@
 -- Complete database schema for production and local environments.
 -- Safe to run against an empty database and safe to run twice (all statements use IF NOT EXISTS).
 
+CREATE TABLE IF NOT EXISTS garages (
+  id          VARCHAR(64) PRIMARY KEY,
+  name        TEXT        NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS vehicles (
   id               SERIAL      PRIMARY KEY,
   model            TEXT        NOT NULL,

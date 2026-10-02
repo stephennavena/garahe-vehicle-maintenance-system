@@ -38,4 +38,6 @@ export const {
   createMaintenanceEntry,
   updateMaintenanceEntry,
   deleteMaintenanceEntry,
+  getGarage,
+  createGarageRecord,
 } = implementation
