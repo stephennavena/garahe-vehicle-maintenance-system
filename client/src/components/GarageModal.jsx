@@ -4,25 +4,24 @@ import { useToast, ToastContainer } from './Toast';
 
 export default function GarageModal() {
   const { garage, isDemo, switchGarage, createGarage, switchToDemo, getShareLink, modalOpen, closeModal } = useGarage();
-  const { toasts, showToast } = useToast();
-
   const [tab, setTab] = useState('current'); // 'current' | 'create' | 'join'
   const [newName, setNewName] = useState('');
   const [newCode, setNewCode] = useState(() => generateGarageCode());
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
+  const { toasts, showToast } = useToast();
 
   if (!modalOpen) return null;
 
   function handleCopyCode() {
     navigator.clipboard.writeText(garage.id.toUpperCase());
-    showToast(`Garage code ${garage.id.toUpperCase()} copied!`, 'success');
+    showToast(`Account code ${garage.id.toUpperCase()} copied!`, 'success');
   }
 
   function handleCopyLink() {
     const link = getShareLink();
     navigator.clipboard.writeText(link);
-    showToast('Direct link copied to clipboard! Open on your phone.', 'success');
+    showToast('Direct account link copied! Send it to your phone or paste in any browser.', 'success');
   }
 
   function handleCreate(e) {
@@ -34,7 +33,7 @@ export default function GarageModal() {
     }
     const name = newName.trim() || `Garage ${code.toUpperCase()}`;
     createGarage(name, code);
-    showToast(`Created and switched to ${name}!`, 'success');
+    showToast(`Created account "${name}"!`, 'success');
     closeModal();
   }
 
@@ -46,13 +45,13 @@ export default function GarageModal() {
       return;
     }
     switchGarage(code);
-    showToast(`Switched to Garage ${code.toUpperCase()}!`, 'success');
+    showToast(`Logged into Garage ${code.toUpperCase()}!`, 'success');
     closeModal();
   }
 
   function handleDemo() {
     switchToDemo();
-    showToast('Switched to Demo Showcase garage!', 'info');
+    showToast('Switched to Demo Showcase!', 'info');
     closeModal();
   }
 
@@ -62,13 +61,27 @@ export default function GarageModal() {
       <div className="modal-card garage-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="garage-modal-title">
-            <span className="garage-icon-lg">🏷️</span>
+            <span className="garage-icon-lg" aria-hidden="true">🛡️</span>
             <div>
-              <h3>Garage Workspace</h3>
-              <p className="text-secondary text-sm">Private cloud workspace without accounts or passwords</p>
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Garage Account</h3>
+              <p className="text-secondary text-sm" style={{ margin: 0 }}>
+                Private cloud workspaces without emails or passwords
+              </p>
             </div>
           </div>
           <button type="button" className="btn-close" onClick={closeModal} aria-label="Close">✕</button>
+        </div>
+
+        {/* Account Explainer Callout */}
+        <div className="account-explainer-box">
+          <div className="account-explainer-header">
+            <span>🔑</span>
+            <strong>How Your Account Works</strong>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.5' }}>
+            In Garahe, you don't need to remember an email or password. Your <strong>Garage Code</strong> serves as your private account key. 
+            All vehicles and service history you add belong to your code.
+          </p>
         </div>
 
         {/* Tab Navigation */}
@@ -78,21 +91,21 @@ export default function GarageModal() {
             className={`garage-tab-btn ${tab === 'current' ? 'active' : ''}`}
             onClick={() => { setTab('current'); setError(''); }}
           >
-            Active Garage
+            👤 Current Account
           </button>
           <button
             type="button"
             className={`garage-tab-btn ${tab === 'create' ? 'active' : ''}`}
             onClick={() => { setTab('create'); setNewCode(generateGarageCode()); setError(''); }}
           >
-            + New Garage
+            ➕ New Account
           </button>
           <button
             type="button"
             className={`garage-tab-btn ${tab === 'join' ? 'active' : ''}`}
             onClick={() => { setTab('join'); setError(''); }}
           >
-            Open by Code
+            🔑 Log In by Code
           </button>
         </div>
 
@@ -103,12 +116,20 @@ export default function GarageModal() {
             <div className="garage-current-view">
               <div className="garage-active-card">
                 <div className="garage-active-meta">
-                  <span className="garage-pill">{isDemo ? '⭐ Public Demo' : '🔒 Private Workspace'}</span>
-                  <h4>{garage.name}</h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span className="garage-pill">{isDemo ? '⭐ Public Demo Showcase' : '🔒 Private Account'}</span>
+                    <span className="text-secondary text-xs">{isDemo ? 'Shared public preview' : 'Isolated workspace'}</span>
+                  </div>
+                  <h4 style={{ fontSize: '1.15rem', color: '#f8fafc', marginBottom: '0.5rem' }}>{garage.name}</h4>
+                  
                   <div className="garage-code-row">
-                    <span className="text-secondary text-sm">Garage Code:</span>
-                    <span className="garage-code-display">{garage.id.toUpperCase()}</span>
-                    <button type="button" className="btn btn-secondary btn-xs" onClick={handleCopyCode}>
+                    <div>
+                      <span className="text-secondary text-xs" style={{ display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Your Account Code
+                      </span>
+                      <span className="garage-code-display">{garage.id.toUpperCase()}</span>
+                    </div>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={handleCopyCode}>
                       📋 Copy Code
                     </button>
                   </div>
@@ -116,17 +137,21 @@ export default function GarageModal() {
               </div>
 
               <div className="garage-sync-box">
-                <p className="text-sm text-secondary">
-                  📱 <strong>Sync across devices:</strong> Want to access these exact cars on your phone or tablet? Use this quick link or type your garage code.
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                  <span style={{ fontSize: '1.1rem' }}>📱</span>
+                  <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>Access On Your Phone / Other Devices</strong>
+                </div>
+                <p className="text-sm text-secondary" style={{ marginBottom: '0.75rem', lineHeight: '1.45' }}>
+                  Want to view or log maintenance on your smartphone? Copy this direct link and send it to yourself, or simply type your code <strong>{garage.id.toUpperCase()}</strong> on your phone.
                 </p>
-                <button type="button" className="btn btn-primary btn-sm" style={{ width: '100%', marginTop: '0.5rem' }} onClick={handleCopyLink}>
-                  🔗 Copy Sync Link for Mobile
+                <button type="button" className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={handleCopyLink}>
+                  🔗 Copy Direct Account Link
                 </button>
               </div>
 
               {!isDemo && (
-                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ width: '100%' }} onClick={handleDemo}>
+                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', textAlign: 'center' }}>
+                  <button type="button" className="btn btn-secondary btn-xs" style={{ width: '100%' }} onClick={handleDemo}>
                     Switch back to Demo Showcase
                   </button>
                 </div>
@@ -136,8 +161,15 @@ export default function GarageModal() {
 
           {tab === 'create' && (
             <form onSubmit={handleCreate} className="garage-form">
+              <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc', fontSize: '1rem' }}>Create a New Private Garage</h4>
+                <p className="text-secondary text-sm" style={{ margin: 0 }}>
+                  Start fresh with your own personal cloud account for your vehicles.
+                </p>
+              </div>
+
               <div className="form-group">
-                <label htmlFor="garage-new-name">Garage Name / Nickname</label>
+                <label htmlFor="garage-new-name">Garage / Account Name</label>
                 <input
                   id="garage-new-name"
                   type="text"
@@ -150,7 +182,7 @@ export default function GarageModal() {
 
               <div className="form-group">
                 <label htmlFor="garage-new-code">
-                  Generated Workspace Code <span className="text-secondary">(or pick your own)</span>
+                  Generated Account Code <span className="text-secondary">(your login key)</span>
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <input
@@ -159,7 +191,7 @@ export default function GarageModal() {
                     value={newCode}
                     onChange={e => setNewCode(e.target.value.toUpperCase())}
                     maxLength={24}
-                    style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 600 }}
+                    style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
                   />
                   <button
                     type="button"
@@ -170,7 +202,7 @@ export default function GarageModal() {
                     🎲 Refresh
                   </button>
                 </div>
-                <small className="form-help">Keep this code so you can access your cars from any browser.</small>
+                <small className="form-help">Save this code. You will use it to access your garage from any device.</small>
               </div>
 
               <div className="modal-actions" style={{ marginTop: '1.25rem' }}>
@@ -178,7 +210,7 @@ export default function GarageModal() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Create & Open Garage
+                  ➕ Create & Open Garage
                 </button>
               </div>
             </form>
@@ -186,8 +218,15 @@ export default function GarageModal() {
 
           {tab === 'join' && (
             <form onSubmit={handleJoin} className="garage-form">
+              <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc', fontSize: '1rem' }}>Log In to Existing Garage</h4>
+                <p className="text-secondary text-sm" style={{ margin: 0 }}>
+                  Enter your Garage Code from another browser or device to load your records.
+                </p>
+              </div>
+
               <div className="form-group">
-                <label htmlFor="garage-join-code">Enter Existing Garage Code</label>
+                <label htmlFor="garage-join-code">Enter Your Garage Code</label>
                 <input
                   id="garage-join-code"
                   type="text"
@@ -195,10 +234,10 @@ export default function GarageModal() {
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   maxLength={24}
-                  style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 600 }}
+                  style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '0.05em' }}
                   autoFocus
                 />
-                <small className="form-help">Type or paste the code from your other device.</small>
+                <small className="form-help">Type or paste the code you saved from your other device.</small>
               </div>
 
               <div className="modal-actions" style={{ marginTop: '1.25rem' }}>
@@ -206,7 +245,7 @@ export default function GarageModal() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={!joinCode.trim()}>
-                  Open Garage
+                  🔑 Log In to Garage
                 </button>
               </div>
             </form>

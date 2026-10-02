@@ -24,10 +24,11 @@ export default function Layout() {
             type="button"
             className="garage-badge-btn"
             onClick={openModal}
-            title="View, copy, or switch garage workspace code"
+            title="Click to view your Garage Account, copy your sync code, or switch garages"
           >
             <span className="garage-badge-dot" style={{ backgroundColor: isDemo ? '#38bdf8' : '#10b981' }} />
-            <span className="garage-badge-label">Garage:</span>
+            <span style={{ fontSize: '0.9rem', marginRight: '2px' }} aria-hidden="true">👤</span>
+            <span className="garage-badge-label">Account:</span>
             <span className="garage-badge-code">{garage.id.toUpperCase()}</span>
           </button>
         </div>
