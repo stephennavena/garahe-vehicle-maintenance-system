@@ -1,18 +1,33 @@
-# Garahe - Vehicle Maintenance Log
+# Garahe — Vehicle Maintenance Log
 
-Garahe is a car maintenance log for car owners who want to actively track their vehicle history. It lets you record maintenance jobs, monitor mileage, and review past expenses — all in one place.
+Garahe is a personal vehicle maintenance tracker for car owners who want to keep a clear, searchable record of every service job, expense, and odometer reading across all their vehicles.
 
-**Live site:** (To be added once deployed)
-**API:** (To be added once deployed)
-**Demo video:** (To be added)
+**Live demo (GitHub Pages):** https://stephennavena.github.io/garahe-vehicle-maintenance-system/
+**API (Render):** https://garahe-api.onrender.com
+**Demo video:** See [`docs/05-demo-video.md`](docs/05-demo-video.md)
 
-> **Demo mode available.** Set `VITE_USE_MOCK_API=true` to run the frontend without any server or database. All data is stored in your browser's localStorage.
+> **Demo mode is the default.** The live site runs with `VITE_USE_MOCK_API=true` — all data stays in your browser's `localStorage`. No account, email, or database required to try it.
 
 ---
 
 ## Overview
 
-Garahe solves the common problem of lost or forgotten maintenance records. Instead of keeping paper receipts or relying on memory, car owners can log every job — oil change, tire rotation, brake replacement — along with the date, mileage, and cost. The app shows a full history per vehicle and keeps the current mileage up to date automatically.
+Instead of keeping paper receipts or relying on memory, Garahe lets you log every maintenance job — oil change, brake replacement, tire rotation — along with the date, odometer reading, cost, and workshop name. The dashboard shows a spending trend chart, service reminder alerts, and a live summary across all your vehicles.
+
+Private **Garage Workspaces** let each user keep their own data isolated behind a short code (e.g. `GRH-8821`). Type the same code on any device to load your records — no password or account registration needed.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 6, React Router 7, vanilla CSS |
+| Backend | Node.js 20, Express 4, Helmet, CORS |
+| Database | PostgreSQL 16+ (connection pooling via `pg`) |
+| Frontend hosting | GitHub Pages (automated via GitHub Actions) |
+| Backend hosting | Render (Web Service) |
+| Database hosting | Neon (managed serverless PostgreSQL) |
 
 ---
 
@@ -21,9 +36,9 @@ Garahe solves the common problem of lost or forgotten maintenance records. Inste
 ### Requirements
 
 - **Node.js** v20 or later
-- **PostgreSQL** 16 or later (for the full stack; not needed in demo mode)
+- **PostgreSQL** 16 or later (for the full stack — not needed in demo mode)
 
-### Clone the repository
+### Clone
 
 ```bash
 git clone https://github.com/stephennavena/garahe-vehicle-maintenance-system.git
@@ -35,21 +50,23 @@ cd garahe-vehicle-maintenance-system
 ```bash
 cd client
 npm install
-cp .env.example .env    # VITE_USE_MOCK_API is true by default
+cp .env.example .env    # VITE_USE_MOCK_API=true by default
 npm run dev             # http://localhost:5173
 ```
 
+Data is saved to `localStorage` in your browser. Nothing is sent to a server.
+
 ### Option B — Full stack (Express + PostgreSQL)
 
-**1. Set up the database**
+**1. Database**
 
-Create a PostgreSQL database named `garahe`:
+Create a local PostgreSQL database:
 
 ```bash
 psql -U postgres -c "CREATE DATABASE garahe;"
 ```
 
-**2. Configure the server**
+**2. Server**
 
 ```bash
 cd server
@@ -57,7 +74,7 @@ npm install
 cp .env.example .env
 ```
 
-Edit `server/.env` and set your database password:
+Edit `server/.env`:
 
 ```env
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/garahe
@@ -65,17 +82,13 @@ CORS_ORIGINS=http://localhost:5173
 NODE_ENV=development
 ```
 
-**3. Create tables and load sample data**
+Create the tables and load sample data:
 
 ```bash
-# Option 1: Load sample seed data
-npm run db:reset
-
-# Option 2: Restore from a PostgreSQL backup dump (if available)
-psql -U postgres -d garahe -f garahe-db-backup.sql
+npm run db:reset    # runs schema.sql then seed.sql
 ```
 
-**4. Configure the client**
+**3. Client**
 
 ```bash
 cd ../client
@@ -91,90 +104,119 @@ VITE_API_BASE_URL=http://localhost:3000
 
 ---
 
-## How to run it
+## Running locally
 
-**Start the API server** (in `server/`):
+**API server** (in `server/`):
 
 ```bash
 npm run dev
-# API listening on http://localhost:3000
-# GET http://localhost:3000/healthz  →  { "ok": true }
-# GET http://localhost:3000/readyz   →  { "ok": true, "db": "up" }
+# Listening on http://localhost:3000
+# GET /healthz  →  { "ok": true }
+# GET /readyz   →  { "ok": true, "db": "up" }
 ```
 
-**Start the frontend** (in `client/`):
+**Frontend** (in `client/`):
 
 ```bash
 npm run dev
 # Open http://localhost:5173
 ```
 
-You should see your vehicles listed and be able to add new maintenance entries. Data persists in PostgreSQL across page reloads.
+---
+
+## Features
+
+### Garage Workspaces (multi-tenancy)
+
+- Create a private workspace with a generated Garage Code (e.g. `GRH-8821`) — no email or password required.
+- Switch between devices by typing your code in the Account modal, or share a direct link (`?garage=YOUR-CODE`).
+- All PostgreSQL queries filter by `garage_id` in parameterised statements, ensuring strict tenant isolation.
+- The built-in **Demo Showcase** garage comes pre-seeded with sample vehicles and records for instant evaluation.
+
+### Dashboard
+
+- Summary cards: total vehicles, total jobs, total spend (₱), last service date.
+- Monthly spending SVG bar chart with a breakdown table toggle (total per month, job count, % share).
+- Clickable recent activity feed — the 5 most recent entries across all vehicles, linking to their history.
+- Overdue / due-soon alert banners across all vehicles.
+
+### Service Reminders
+
+- 17 built-in job types with km and/or day intervals (Oil Change, PMS, Brake Pads, Brake Fluid, Tire Rotation, Air Filter, Cabin Filter, Battery Replacement, Spark Plugs, Coolant Flush, Transmission Service, Timing Belt, Wheel Alignment, Suspension, Wiper Blades, General Inspection).
+- Overdue 🔴 and due-soon 🟡 badges on vehicle cards in both the Dashboard and Vehicles views.
+- Explicit next-due mileage field (`next_due_km`) per entry — overrides the generic km interval when set.
+
+### Vehicles
+
+- Add and edit vehicles with model name, current odometer reading (km), and an optional photo (file upload or URL).
+- Real-time vehicle search.
+- Quick odometer update inline — update km without creating a maintenance entry.
+- Safe delete with a confirmation modal — cascades to remove all maintenance records for that vehicle.
+- Per-vehicle stats: jobs logged, total spend, last service date, cost per km.
+
+### Maintenance Logging
+
+- **Multi-job visits:** Log multiple service jobs in a single form submission (same date, same odometer) — each gets its own job type, cost, shop name, and notes.
+- Visit-level fields: service date (no future dates allowed), odometer at service.
+- Pre-fills from the most recent entry to speed up repeat visits.
+- Optional `next_due_km` field sets a custom reminder target for any job.
+- Client-side validation with inline error messages before any API call is made.
+
+### Maintenance History
+
+- Filterable, sortable list: keyword search (job, shop, notes), job type dropdown, date range, sort by newest / oldest / highest cost.
+- Inline edit for any record — updates vehicle mileage automatically if the edited mileage is higher.
+- CSV export (UTF-8 BOM, Excel-compatible) of the full maintenance log for a vehicle.
+- Per-vehicle stats: total jobs, total cost, last service date, ₱/km metric.
+- Reminder banners showing exact overdue/due-soon detail per job type.
+
+### UX
+
+- Toast notifications for every create, update, delete, and error action.
+- Custom confirmation modal (no browser `confirm()` dialogs).
+- Dynamic browser tab title per page via `usePageTitle` hook.
+- Keyboard shortcuts: `Escape` closes any open form or edit panel.
+- Responsive layout — works on mobile browsers.
 
 ---
 
-## Features and usage
+## API reference
 
-### Private Garage Workspaces (Lightweight Multi-Tenancy)
-- **Zero-Friction Private Workspaces:** Users can create an isolated garage workspace with a unique Garage Code (e.g. `GRH-8821`) without needing to register personal emails or manage passwords.
-- **Cross-Device Cloud Sync:** Sync your garage seamlessly across mobile and desktop by typing your garage code or sharing a direct sync link (`?garage=CODE`).
-- **Complete Tenant Isolation:** PostgreSQL queries filter strictly by `garage_id` in parameterised queries, ensuring that each user only views and modifies their own cars and service history.
-- **Instant Demo Showcase:** Graders and visitors can toggle to the pre-seeded `Demo Showcase` garage in 1 click, allowing immediate testing of sample records.
+All routes require an `X-Garage-Id` request header (defaults to `demo` on the server if omitted).
 
-### Interactive Dashboard & Spending Analytics
-- **Metric Summary Cards:** Quick stats displaying Total Vehicles, Total Service Jobs logged, Total Maintenance Expenditure (₱), and Date of Last Recorded Service.
-- **Monthly Spending Trend Chart:** Visual SVG monthly expenditure chart illustrating maintenance costs over time to track garage spending trends.
-- **Clickable Recent Activity:** Displays the latest service entries across all vehicles; clicking any entry routes directly to that vehicle's maintenance history.
-- **Empty States:** Clear visual prompts and quick-action links when no vehicles or logs are present.
+### Vehicles
 
-### Service Reminders & Due-Soon Alerts
-- **Intelligent Interval Tracking:** Automated reminder engine (`serviceReminders.js`) based on distance driven (km) and time elapsed (months) across 17 standard maintenance jobs (Oil Change, PMS, Brake Pads, Tire Rotation, Battery, Spark Plugs, Coolant, Transmission Fluid, etc.).
-- **Visual Alert Badges:** High-visibility Overdue (🔴) and Due Soon (🟡) badges on vehicle cards and contextual alert banners in vehicle maintenance history views.
-
-### Vehicle Management
-- **Add & Edit Vehicles:** Register vehicles with model name and current odometer reading (km), with live in-place editing.
-- **Vehicle Photo Support:** Support for vehicle photos with fallback avatars.
-- **Quick Odometer Update:** Directly update a vehicle's current odometer from the vehicle card or history view without creating a placeholder maintenance log.
-- **Cost per Kilometer Metric:** Automatic calculation of operating maintenance cost per km (`₱/km`) driven.
-- **Search Vehicles:** Real-time search filter by vehicle model name.
-- **Safe Deletion:** Reusable confirmation modal prevents accidental deletion; deleting a vehicle automatically cascades and removes its maintenance history.
-
-### Maintenance Logging & History
-- **Multi-Line Job Items:** Log multiple service jobs performed in a single shop visit (e.g. Oil Change + Brake Inspection + Fluid Top-up) with individual item costs and descriptions, calculating the total automatically.
-- **Shop / Garage Name Tracking:** Record the shop or technician name (e.g. "Toyota BGC", "Rapide Pasig", "Shell Helix") for warranty and service reference.
-- **Next Service Mileage Field:** Set an optional target odometer reading (`next_due_km`) for the next scheduled service.
-- **Copy Last Entry:** 1-click shortcut to pre-fill the form using details from the vehicle's most recent service log.
-- **Intelligent Mileage Validation:** Checks odometer input against current vehicle mileage with clear, human-readable error messages showing the vehicle's current km reading.
-- **Date Protection:** Disallows accidental future dates on service entries.
-- **In-Place Editing:** Update past maintenance records directly from the history view, with automatic vehicle mileage synchronization.
-- **Advanced Filtering & Search:**
-  - Keyword search across job types, shop names, and notes.
-  - Job type dropdown filter.
-  - Explicit, user-friendly date range filters ("From date" and "To date") with a single-click reset.
-  - Sorting by Newest first, Oldest first, or Highest cost.
-- **Cost Analytics:** Live summary of total filtered entries and total cost spent.
-- **CSV Data Export:** One-click export of vehicle maintenance logs into `.csv` spreadsheets for offline backup or records.
-
-### User Experience & Architecture
-- **Toast Notifications:** Automatic feedback for create, update, delete, and error operations.
-- **Custom Confirmation Modals:** Smooth, non-disruptive dialogs replacing standard browser alert/confirm popups.
-- **Dynamic Document Titles:** Custom hook updating browser tab titles per screen for better usability.
-- **Dual API Support:** Toggle effortlessly between browser `localStorage` demo mode and the full Express + PostgreSQL backend with a single environment variable (`VITE_USE_MOCK_API`).
-
-### API endpoints
-
-| Method | Path | Description |
+| Method | Path | Body / Notes |
 |--------|------|-------------|
-| `GET` | `/api/vehicles` | List all vehicles |
-| `POST` | `/api/vehicles` | Add a vehicle (`model`, `current_mileage`, `photo_url`) |
-| `PUT` | `/api/vehicles/:id` | Update a vehicle (model, current mileage, photo) |
-| `DELETE` | `/api/vehicles/:id` | Delete a vehicle and its entries |
-| `GET` | `/api/maintenance?vehicleId=N` | List entries (filter by vehicle optional) |
-| `POST` | `/api/maintenance` | Add maintenance entry (`vehicle_id`, `date`, `mileage`, `job_type`, `cost`, `notes`, `shop_name`, `next_due_km`) |
-| `PUT` | `/api/maintenance/:id` | Update maintenance entry (syncs vehicle mileage) |
-| `DELETE` | `/api/maintenance/:id` | Delete a maintenance entry |
-| `GET` | `/healthz` | Process health check |
-| `GET` | `/readyz` | Database health check |
+| `GET` | `/api/vehicles` | Returns all vehicles for the active garage |
+| `GET` | `/api/vehicles/:id` | Single vehicle |
+| `POST` | `/api/vehicles` | `model`, `current_mileage`, `photo_url` |
+| `PUT` | `/api/vehicles/:id` | `model`, `current_mileage`, `photo_url` |
+| `DELETE` | `/api/vehicles/:id` | Cascades to maintenance entries |
+
+### Maintenance entries
+
+| Method | Path | Body / Notes |
+|--------|------|-------------|
+| `GET` | `/api/maintenance` | All entries; `?vehicleId=N` to filter |
+| `GET` | `/api/maintenance/:id` | Single entry |
+| `POST` | `/api/maintenance` | `vehicle_id`, `job_type`, `date`, `mileage`, `cost`, `notes`, `shop_name`, `next_due_km` |
+| `PUT` | `/api/maintenance/:id` | Same fields; syncs vehicle mileage if higher |
+| `DELETE` | `/api/maintenance/:id` | Single entry |
+
+### Garages
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET` | `/api/garages/:id` | Lookup a garage code; `404` if not found |
+| `POST` | `/api/garages` | `id`, `name` — creates or updates a garage record |
+
+### Health
+
+| Method | Path | Response |
+|--------|------|----------|
+| `GET` | `/healthz` | `{ "ok": true }` |
+| `GET` | `/readyz` | `{ "ok": true, "db": "up" }` or `503` |
 
 ---
 
@@ -182,80 +224,163 @@ You should see your vehicles listed and be able to add new maintenance entries. 
 
 ```
 garahe-vehicle-maintenance-system/
-├── client/                     # React + Vite frontend
+├── client/                       # React + Vite frontend
 │   ├── src/
 │   │   ├── api/
-│   │   │   ├── index.js        # Picks mock or real API based on env var
-│   │   │   ├── mockApi.js      # Browser-only fake backend (localStorage)
-│   │   │   ├── httpApi.js      # Real API calls to Express server
-│   │   │   └── seed.json       # Sample data for demo mode
-│   │   ├── components/         # UI Components
-│   │   │   ├── Dashboard.jsx   # Stats overview, spending chart, recent activity
-│   │   │   ├── SpendingChart.jsx # Monthly expenditure SVG trend chart
-│   │   │   ├── Vehicles.jsx    # Vehicle listing, badges, search, add, edit
-│   │   │   ├── AddMaintenance.jsx # Multi-line jobs, shop name, next due km, copy last entry
-│   │   │   ├── MaintenanceHistory.jsx # Filterable table, reminder banners, inline edit, CSV export
-│   │   │   ├── GarageModal.jsx # Workspace switcher, code display, and mobile sync link
-│   │   │   ├── ConfirmModal.jsx # Accessible confirmation modal dialog
-│   │   │   ├── Toast.jsx       # Floating notification alert system
-│   │   │   └── DemoNotice.jsx  # Notification banner for demo mode
+│   │   │   ├── index.js          # Selects mock or real API via env var
+│   │   │   ├── mockApi.js        # localStorage-backed fake backend
+│   │   │   ├── httpApi.js        # Fetch calls to the Express API
+│   │   │   └── seed.json         # Demo data for mock mode
+│   │   ├── components/
+│   │   │   ├── Dashboard.jsx     # Stats, spending chart, recent activity
+│   │   │   ├── SpendingChart.jsx # SVG monthly bar chart with table toggle
+│   │   │   ├── Vehicles.jsx      # Vehicle list, search, add, edit, delete
+│   │   │   ├── AddMaintenance.jsx # Multi-job form, next due km, pre-fill
+│   │   │   ├── MaintenanceHistory.jsx # History, filters, inline edit, CSV export
+│   │   │   ├── GarageModal.jsx   # Workspace switcher, code display, sync link
+│   │   │   ├── ConfirmModal.jsx  # Accessible delete confirmation dialog
+│   │   │   ├── Toast.jsx         # Floating success/error notifications
+│   │   │   └── DemoNotice.jsx    # Banner shown while in demo/mock mode
 │   │   ├── context/
-│   │   │   └── GarageContext.jsx # Workspace code generator, active garage state, URL parsing
-│   │   ├── utils/
-│   │   │   └── serviceReminders.js # Interval thresholds, overdue & due-soon calculation
+│   │   │   └── GarageContext.jsx # Active garage state, code generation, URL parsing
 │   │   ├── hooks/
-│   │   │   └── usePageTitle.js # Document title manager
-│   │   ├── styles.css          # Dark slate theme and responsive layout
-│   │   └── main.jsx            # App entry point and routing
-│   ├── .env.example            # Client environment variable template
-│   └── index.html
-├── server/                     # Express + PostgreSQL backend
+│   │   │   └── usePageTitle.js   # Sets document.title per page
+│   │   ├── utils/
+│   │   │   └── serviceReminders.js # Interval thresholds, overdue/due-soon logic
+│   │   ├── styles.css            # Dark slate theme, responsive grid, all component styles
+│   │   └── main.jsx              # App entry point
+│   ├── .env.example
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+├── server/                       # Express + PostgreSQL API
 │   ├── db/
-│   │   ├── schema.sql          # Base table definitions (vehicles, maintenance_entries)
-│   │   ├── migrate_v2.sql      # Schema additions (shop_name, next_due_km)
-│   │   ├── migrate_v3.sql      # Multi-tenancy migration (garage_id column & index)
-│   │   ├── seed.sql            # Sample data for development
-│   │   ├── pool.js             # PostgreSQL connection pool
-│   │   └── run.js              # Utility to run .sql files
-│   ├── maintenanceRepo.js      # Parameterised SQL queries (CRUD)
-│   ├── server.js               # Express routes and validation
-│   └── .env.example            # Server environment variable template
-├── docs/                       # Planning documents and reports
-├── AI-USAGE.md                 # Detailed log of AI prompts, changes, and errors
-├── HANDOVER.md                 # Project handover, environment state, and next steps
-├── compose.yml                 # Docker Compose (server + database)
-└── README.md                   # Project overview and documentation
+│   │   ├── schema.sql            # Full table definitions (safe to run twice)
+│   │   ├── migrate_v2.sql        # Adds photo_url, next_due_km, shop_name
+│   │   ├── migrate_v3.sql        # Adds garage_id for multi-tenancy
+│   │   ├── seed.sql              # Sample data for the demo garage
+│   │   ├── pool.js               # pg.Pool configuration
+│   │   └── run.js                # CLI helper to execute .sql files
+│   ├── maintenanceRepo.js        # Parameterised SQL data-access layer
+│   ├── server.js                 # Express routes, middleware, validation
+│   ├── Dockerfile
+│   ├── .env.example
+│   └── package.json
+├── .github/
+│   └── workflows/
+│       └── deploy-pages.yml      # Builds and deploys client to GitHub Pages on push to main
+├── docs/                         # Proposal, mockups, design system, weekly reports, demo video
+├── AI-USAGE.md                   # Full log of AI assistance used in this project
+├── compose.yml                   # Docker Compose for local self-hosting (server + PostgreSQL)
+├── .gitignore
+├── .env.example                  # Root-level env example (Compose variables)
+└── README.md
 ```
 
 ---
 
-## Deployment checklist & next steps
+## Deployment
 
-1. **Production Database (Neon):**
-   - Provision free managed PostgreSQL database on Neon.
-   - Execute `schema.sql`, `migrate_v2.sql`, and `migrate_v3.sql` to establish production tables.
-2. **Backend API (Render):**
-   - Connect repository to a Render Web Service (`server/`).
-   - Configure production environment variables (`DATABASE_URL`, `CORS_ORIGINS`).
-   - Verify health checks at `/healthz` and `/readyz`.
-3. **Frontend Client (GitHub Pages):**
-   - Configure GitHub Actions build workflow for automated Vite deployment.
-   - Set `VITE_API_BASE_URL` to the live Render API URL and build for production.
+The project is deployed across three services:
+
+### Frontend — GitHub Pages
+
+Automated via `.github/workflows/deploy-pages.yml`. Every push to `main` triggers a Vite build and deploys `client/dist` to GitHub Pages.
+
+Required repository **Variables** (`Settings → Secrets and variables → Actions → Variables`):
+
+| Variable | Value |
+|----------|-------|
+| `VITE_USE_MOCK_API` | `false` |
+| `VITE_API_BASE_URL` | `https://garahe-api.onrender.com` |
+
+GitHub Pages must be enabled once manually: `Settings → Pages → Source: GitHub Actions`.
+
+### Backend API — Render
+
+Web Service pointed at the `server/` directory.
+
+Required environment variables set in the Render dashboard:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Neon connection string |
+| `CORS_ORIGINS` | `https://stephennavena.github.io` |
+| `NODE_ENV` | `production` |
+
+### Database — Neon
+
+Free managed PostgreSQL. Schema was initialised by running, in order:
+
+```bash
+node --env-file=.env db/run.js db/schema.sql
+node --env-file=.env db/run.js db/migrate_v2.sql
+node --env-file=.env db/run.js db/migrate_v3.sql
+```
+
+---
+
+## Database schema
+
+```sql
+garages (id VARCHAR(64) PK, name TEXT, created_at TIMESTAMPTZ)
+
+vehicles (
+  id SERIAL PK,
+  model TEXT NOT NULL,
+  current_mileage INTEGER NOT NULL DEFAULT 0,
+  photo_url TEXT NOT NULL DEFAULT '',
+  garage_id VARCHAR(64) NOT NULL DEFAULT 'demo',
+  created_at TIMESTAMPTZ
+)
+
+maintenance_entries (
+  id SERIAL PK,
+  vehicle_id INTEGER → vehicles(id) ON DELETE CASCADE,
+  job_type TEXT NOT NULL,
+  date DATE NOT NULL,
+  mileage INTEGER NOT NULL,
+  cost NUMERIC(10,2) NOT NULL DEFAULT 0,
+  notes TEXT NOT NULL DEFAULT '',
+  next_due_km INTEGER,
+  shop_name TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ
+)
+```
+
+---
+
+## Environment variables
+
+### `client/.env`
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_USE_MOCK_API` | `true` | `false` to use the real Express API |
+| `VITE_API_BASE_URL` | `http://localhost:3000` | Base URL of the Express API |
+
+### `server/.env`
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `CORS_ORIGINS` | ✅ | Comma-separated allowed origins |
+| `NODE_ENV` | — | `production` on hosted environments |
+| `PORT` | — | Set by the host automatically; do not set manually |
 
 ---
 
 ## AI usage
 
-This project was built with AI assistance. See [AI-USAGE.md](AI-USAGE.md) for the full record of what was used, what was kept, and what was changed.
+This project was built with AI assistance. See [AI-USAGE.md](AI-USAGE.md) for the full record of prompts used, what was generated, what was kept, and what was changed.
 
 ---
 
 ## Author
 
 Stephenn C. Avena
-CS – 401
-2203 – 6APSI
+CS – 401 · 2203-6APSI
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
