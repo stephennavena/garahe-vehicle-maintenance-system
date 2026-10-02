@@ -8,14 +8,17 @@ const app = express()
 
 // CORS before the routes. Middleware registered after a route never sees that
 // route's requests.
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
+const rawOrigins = process.env.CORS_ORIGINS || 'http://localhost:5173'
+const allowedOrigins = rawOrigins
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
 
+const corsOrigin = allowedOrigins.includes('*') ? true : allowedOrigins
+
 app.use(helmet())
 app.use(cors({
-  origin: allowedOrigins,
+  origin: corsOrigin,
   allowedHeaders: ['Content-Type', 'X-Garage-Id'],
 }))
 app.use(express.json({ limit: '2mb' })) // allow larger payloads for photo URLs
