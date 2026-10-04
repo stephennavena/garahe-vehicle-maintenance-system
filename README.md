@@ -4,7 +4,7 @@ Garahe is a personal vehicle maintenance tracker for car owners who want to keep
 
 **Live demo (GitHub Pages):** https://stephennavena.github.io/garahe-vehicle-maintenance-system/
 **API (Render):** https://garahe-api.onrender.com
-**Demo video:** See [`docs/05-demo-video.md`](docs/05-demo-video.md)
+**Demo video:** https://drive.google.com/file/d/18WAJ5Hv3khSRaZPJZznQYhK9Fc2Owx3t/view?usp=sharing
 
 > **Demo mode is the default.** The live site runs with `VITE_USE_MOCK_API=true` — all data stays in your browser's `localStorage`. No account, email, or database required to try it.
 
@@ -379,7 +379,7 @@ This project was built with AI assistance. See [AI-USAGE.md](AI-USAGE.md) for th
 ## Author
 
 Stephenn C. Avena
-CS – 401 · 2203-6APSI
+
 
 ## Licence
 
